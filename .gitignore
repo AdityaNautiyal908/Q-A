@@ -1,0 +1,5 @@
+# Ignore sensitive files
+config.js
+.env
+node_modules
+package-lock.json
