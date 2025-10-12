@@ -1,6 +1,6 @@
 const express = require('express');
 const axios = require('axios');
-const path = require('path'); // Add this line
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -9,9 +9,16 @@ const port = 3000;
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Add this route to serve index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/styles.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'styles.css'));
+});
+
+app.get('/script.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'script.js'));
 });
 
 app.post('/api/solve', async (req, res) => {
