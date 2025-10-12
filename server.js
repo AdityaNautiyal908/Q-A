@@ -31,14 +31,7 @@ app.post('/api/solve', async (req, res) => {
         return res.status(500).json({ error: 'API key not found.' });
     }
 
-    const prompt = `You are an expert assignment solver. Your task is to provide a direct solution to the user's coding question.
-    Provide only the following two things:
-    1.  The complete, runnable code solution. The code should not contain any comments.
-    2.  The output of the code.
-
-    Structure your response with a "## Code" heading for the code and a "## Output" heading for the output.
-    Do not provide any explanation, logic, or any other text besides the code and the output.
-    User Question: "${questionText}"`;
+    const prompt = `User Question: "${questionText}"`;
 
     try {
         const response = await axios.post(API_ENDPOINT, {
@@ -47,7 +40,7 @@ app.post('/api/solve', async (req, res) => {
         res.json(response.data);
     } catch (error) {
         console.error('Error calling Gemini API:', error.response ? error.response.data : error.message);
-        res.status(error.response ? error.response.status : 500).json({ error: 'Failed to get response from AI.' });
+        res.status(500).json({ error: 'Failed to get response from AI.' });
     }
 });
 

@@ -154,16 +154,22 @@ p.subtitle {
     margin-bottom: 20px;
 }
 
-#mic-button {
+.icon-button {
     position: absolute;
     bottom: 15px;
-    right: 15px;
     background: none;
     border: none;
-    font-size: 24px;
     cursor: pointer;
     padding: 10px;
     color: var(--subtle-text-color);
+}
+
+#mic-button {
+    right: 15px;
+}
+
+#image-upload-label {
+    right: 60px;
 }
 
 #mic-button.is-listening {

@@ -7,6 +7,7 @@ window.addEventListener('load', () => {
         }, 1000);
     }, 2000);
 
+    mermaid.initialize({ startOnLoad: false });
     loadSession();
 });
 
@@ -122,6 +123,21 @@ function addReadAloudButtons() {
     });
 }
 
+function renderMermaidDiagrams() {
+    const mermaidElements = document.querySelectorAll('pre code.language-mermaid');
+    mermaidElements.forEach((element, index) => {
+        const id = `mermaid-diagram-${Date.now()}-${index}`;
+        const mermaidCode = element.textContent;
+        
+        mermaid.render(id, mermaidCode, (svgCode) => {
+            const preElement = element.parentElement;
+            const diagramContainer = document.createElement('div');
+            diagramContainer.innerHTML = svgCode;
+            preElement.parentNode.replaceChild(diagramContainer, preElement);
+        });
+    });
+}
+
 function saveSession() {
     localStorage.setItem('conversationHistory', JSON.stringify(conversationHistory));
 }
@@ -151,6 +167,7 @@ function renderHistory() {
     hljs.highlightAll();
     addCopyButtons();
     addReadAloudButtons();
+    renderMermaidDiagrams();
     if (conversationHistory.length > 0) {
         document.getElementById('convert-to-word').style.display = 'block';
         document.getElementById('clear-button').style.display = 'block';
@@ -222,6 +239,7 @@ async function rerunQuestion(index, newQuestion) {
         hljs.highlightAll();
         addCopyButtons();
         addReadAloudButtons();
+        renderMermaidDiagrams();
 
     } catch (error) {
         solutionContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
@@ -232,6 +250,7 @@ document.getElementById('solve-button').addEventListener('click', async () => {
     const allQuestionsText = document.getElementById('question-input').value;
     const outputElement = document.getElementById('solution-output');
     const wordButton = document.getElementById('convert-to-word');
+    const imageUpload = document.getElementById('image-upload');
 
     if (!allQuestionsText.trim()) {
         outputElement.innerHTML = '<p style="color: red;">Please enter a question to solve.</p>';
@@ -285,6 +304,7 @@ document.getElementById('solve-button').addEventListener('click', async () => {
             hljs.highlightAll();
             addCopyButtons();
             addReadAloudButtons();
+            renderMermaidDiagrams();
 
             practicalCount++;
             wordButton.style.display = 'block';
