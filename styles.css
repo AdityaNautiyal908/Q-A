@@ -410,3 +410,10 @@ hr {
 .markdown-body th {
     background-color: var(--surface-color);
 }
+
+@media (max-width: 768px) {
+    .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+}
