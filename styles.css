@@ -149,6 +149,33 @@ p.subtitle {
     font-size: 1.1em;
 }
 
+.textarea-wrapper {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+#mic-button {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 10px;
+    color: var(--subtle-text-color);
+}
+
+#mic-button.is-listening {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
+    70% { transform: scale(1.2); box-shadow: 0 0 10px 20px rgba(255, 82, 82, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
+}
+
 textarea#question-input {
     width: 100%;
     padding: 15px;
@@ -157,7 +184,6 @@ textarea#question-input {
     box-sizing: border-box;
     font-size: 16px;
     resize: vertical;
-    margin-bottom: 20px;
     background-color: var(--background-color);
     color: var(--text-color);
     min-height: 150px;
@@ -241,6 +267,14 @@ button, .button {
 
 .delete-button {
     background-color: var(--error-color);
+    color: white;
+    padding: 5px 10px;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.read-aloud-button {
+    background-color: var(--primary-color);
     color: white;
     padding: 5px 10px;
     font-size: 12px;

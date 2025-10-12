@@ -15,8 +15,52 @@ themeSwitch.addEventListener('change', () => {
     document.body.classList.toggle('light-mode');
 });
 
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micButton = document.getElementById('mic-button');
+const questionInput = document.getElementById('question-input');
+
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    micButton.addEventListener('click', () => {
+        if (micButton.classList.contains('is-listening')) {
+            recognition.stop();
+        } else {
+            recognition.start();
+        }
+    });
+
+    recognition.onstart = () => {
+        micButton.classList.add('is-listening');
+    };
+
+    recognition.onend = () => {
+        micButton.classList.remove('is-listening');
+    };
+
+    recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
+        questionInput.value = finalTranscript + interimTranscript;
+    };
+
+} else {
+    micButton.style.display = 'none';
+    console.log('Speech Recognition not supported');
+}
+
 let conversationHistory = [];
 let practicalCount = 0;
+let activeReadAloudButton = null;
 
 function addCopyButtons() {
     const codeBlocks = document.querySelectorAll('.markdown-body pre');
@@ -37,6 +81,44 @@ function addCopyButtons() {
         });
 
         block.prepend(button);
+    });
+}
+
+function addReadAloudButtons() {
+    const solutionContainers = document.querySelectorAll('.solution-text-container');
+    solutionContainers.forEach((container, index) => {
+        if (container.querySelector('.read-aloud-button')) return;
+        const button = document.createElement('button');
+        button.innerText = 'Read Aloud';
+        button.className = 'read-aloud-button';
+
+        button.addEventListener('click', () => {
+            const wasActive = (activeReadAloudButton === button);
+
+            speechSynthesis.cancel();
+            if (activeReadAloudButton) {
+                activeReadAloudButton.innerText = 'Read Aloud';
+            }
+            activeReadAloudButton = null;
+
+            if (!wasActive) {
+                const text = conversationHistory[index].solution;
+                const utterance = new SpeechSynthesisUtterance(text);
+
+                utterance.onend = () => {
+                    if (activeReadAloudButton === button) {
+                        button.innerText = 'Read Aloud';
+                        activeReadAloudButton = null;
+                    }
+                };
+
+                speechSynthesis.speak(utterance);
+                button.innerText = 'Stop';
+                activeReadAloudButton = button;
+            }
+        });
+
+        container.prepend(button);
     });
 }
 
@@ -62,11 +144,13 @@ function renderHistory() {
         const htmlSolution = marked.parse(practical.solution);
         const editButton = `<button class="edit-button" onclick="openEditModal(${index})">Edit</button>`;
         const deleteButton = `<button class="delete-button" onclick="deletePractical(${index})">Delete</button>`;
-        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}</h2><p>${practical.question}</p><div class="solution-text-container">${htmlSolution}</div>`;
+        const readAloudButton = `<button class="read-aloud-button" onclick="readAloud(${index})">Read Aloud</button>`;
+        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}${readAloudButton}</h2><p>${practical.question}</p><div class="solution-text-container">${htmlSolution}</div>`;
         outputElement.appendChild(practicalContainer);
     });
     hljs.highlightAll();
     addCopyButtons();
+    addReadAloudButtons();
     if (conversationHistory.length > 0) {
         document.getElementById('convert-to-word').style.display = 'block';
         document.getElementById('clear-button').style.display = 'block';
@@ -137,6 +221,7 @@ async function rerunQuestion(index, newQuestion) {
         saveSession();
         hljs.highlightAll();
         addCopyButtons();
+        addReadAloudButtons();
 
     } catch (error) {
         solutionContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
@@ -199,6 +284,7 @@ document.getElementById('solve-button').addEventListener('click', async () => {
 
             hljs.highlightAll();
             addCopyButtons();
+            addReadAloudButtons();
 
             practicalCount++;
             wordButton.style.display = 'block';
