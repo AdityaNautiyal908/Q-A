@@ -273,9 +273,11 @@ function getDownloadContent() {
                     font-family: 'Times New Roman', Times, serif;
                     line-height: 1.6;
                     padding: 20px;
+                    color: black;
                 }
                 * {
                     font-family: 'Times New Roman', Times, serif;
+                    color: black;
                 }
                 h2 { color: #333; }
                 pre, code {
