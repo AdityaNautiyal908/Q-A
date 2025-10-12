@@ -6,7 +6,7 @@ const app = express();
 const port = 3000;
 
 app.use(express.json());
-app.use(express.static(__dirname)); // Serve static files from the root directory
+app.use(express.static(__dirname));
 
 app.post('/api/solve', async (req, res) => {
     const { questionText } = req.body;
@@ -18,12 +18,13 @@ app.post('/api/solve', async (req, res) => {
         return res.status(500).json({ error: 'API key not found.' });
     }
 
-    const prompt = `You are an expert assignment solver. The user has provided a question.
-    Your primary goal is to provide only the code and the output, without any explanation.
-    Provide the final, runnable code under a "## Solution" heading.
-    Provide the output of the code under a "## Output" heading.
-    Do not provide any explanation unless the user explicitly asks for it.
-    Format your entire answer strictly using Markdown.
+    const prompt = `You are an expert assignment solver. Your task is to provide a direct solution to the user's coding question.
+    Provide only the following two things:
+    1.  The complete, runnable code solution. The code should not contain any comments.
+    2.  The output of the code.
+
+    Structure your response with a "## Code" heading for the code and a "## Output" heading for the output.
+    Do not provide any explanation, logic, or any other text besides the code and the output.
     User Question: "${questionText}"`;
 
     try {

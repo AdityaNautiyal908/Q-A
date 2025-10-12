@@ -38,6 +38,9 @@
             <button id="solve-button">Get Solution</button>
             <button id="convert-to-word" style="display: none;">Download Solution</button>
             <button id="clear-button" style="display: none;">Clear Session</button>
+            <button id="export-button" style="display: none;">Export Session</button>
+            <label for="import-file" class="button" id="import-label">Import Session</label>
+            <input type="file" id="import-file" accept=".json" style="display: none;">
         </div>
         
         <hr>
@@ -47,6 +50,15 @@
             <div id="solution-output">
                 <p>Your solution will appear here. The more detailed your question, the better the answer.</p>
             </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Edit Question</h2>
+            <textarea id="edit-textarea" rows="5" style="width: 100%;"></textarea>
+            <button id="save-edit-button">Save & Rerun</button>
         </div>
     </div>
 

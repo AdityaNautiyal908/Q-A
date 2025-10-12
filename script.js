@@ -21,6 +21,7 @@ let practicalCount = 0;
 function addCopyButtons() {
     const codeBlocks = document.querySelectorAll('.markdown-body pre');
     codeBlocks.forEach(block => {
+        if (block.querySelector('.copy-button')) return;
         const button = document.createElement('button');
         button.innerText = 'Copy';
         button.className = 'copy-button';
@@ -55,10 +56,13 @@ function loadSession() {
 function renderHistory() {
     const outputElement = document.getElementById('solution-output');
     outputElement.innerHTML = '';
-    conversationHistory.forEach(practical => {
+    conversationHistory.forEach((practical, index) => {
         const practicalContainer = document.createElement('div');
+        practicalContainer.id = `practical-${index}`;
         const htmlSolution = marked.parse(practical.solution);
-        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}</h2><p>${practical.question}</p>${htmlSolution}`;
+        const editButton = `<button class="edit-button" onclick="openEditModal(${index})">Edit</button>`;
+        const deleteButton = `<button class="delete-button" onclick="deletePractical(${index})">Delete</button>`;
+        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}</h2><p>${practical.question}</p><div class="solution-text-container">${htmlSolution}</div>`;
         outputElement.appendChild(practicalContainer);
     });
     hljs.highlightAll();
@@ -66,6 +70,76 @@ function renderHistory() {
     if (conversationHistory.length > 0) {
         document.getElementById('convert-to-word').style.display = 'block';
         document.getElementById('clear-button').style.display = 'block';
+        document.getElementById('export-button').style.display = 'block';
+    } else {
+        document.getElementById('convert-to-word').style.display = 'none';
+        document.getElementById('clear-button').style.display = 'none';
+        document.getElementById('export-button').style.display = 'none';
+    }
+}
+
+function deletePractical(index) {
+    conversationHistory.splice(index, 1);
+    conversationHistory.forEach((practical, i) => {
+        practical.practicalNo = i + 1;
+    });
+    practicalCount = conversationHistory.length;
+    saveSession();
+    renderHistory();
+}
+
+function openEditModal(index) {
+    const modal = document.getElementById('edit-modal');
+    const textarea = document.getElementById('edit-textarea');
+    const saveButton = document.getElementById('save-edit-button');
+
+    textarea.value = conversationHistory[index].question;
+    modal.style.display = 'block';
+
+    saveButton.onclick = () => {
+        rerunQuestion(index, textarea.value);
+        modal.style.display = 'none';
+    };
+}
+
+async function rerunQuestion(index, newQuestion) {
+    conversationHistory[index].question = newQuestion;
+
+    const practicalContainer = document.getElementById(`practical-${index}`);
+    let solutionContainer = practicalContainer.querySelector('.solution-text-container');
+    if (!solutionContainer) {
+        solutionContainer = document.createElement('div');
+        solutionContainer.className = 'solution-text-container';
+        practicalContainer.appendChild(solutionContainer);
+    }
+    
+    practicalContainer.innerHTML = `<h2>Practical No: ${conversationHistory[index].practicalNo}<button class="edit-button" onclick="openEditModal(${index})">Edit</button><button class="delete-button" onclick="deletePractical(${index})">Delete</button></h2><p>${newQuestion}</p>`;
+    practicalContainer.appendChild(solutionContainer);
+    solutionContainer.innerHTML = '<div class="loader"></div>';
+
+    try {
+        const response = await fetch('/api/solve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questionText: newQuestion })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`API Error: ${response.status} - ${errorData.error}`);
+        }
+
+        const data = await response.json();
+        const solutionText = data.candidates[0].content.parts[0].text;
+
+        solutionContainer.innerHTML = marked.parse(solutionText);
+        conversationHistory[index].solution = solutionText;
+        saveSession();
+        hljs.highlightAll();
+        addCopyButtons();
+
+    } catch (error) {
+        solutionContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
     }
 }
 
@@ -81,19 +155,22 @@ document.getElementById('solve-button').addEventListener('click', async () => {
 
     const questions = allQuestionsText.split('\n').filter(q => q.trim() !== '');
 
-    if (questions.length === 0) {
-        return;
-    }
+    if (questions.length === 0) return;
 
     if (practicalCount === 0) {
         outputElement.innerHTML = '';
     }
 
     for (const questionText of questions) {
-        const loaderId = `loader-${practicalCount}`;
+        const currentPracticalNo = practicalCount + 1;
         const practicalContainer = document.createElement('div');
-        practicalContainer.innerHTML = `<h2>Practical No: ${practicalCount + 1}</h2><div class="loader" id="${loaderId}"></div>`;
+        practicalContainer.id = `practical-${practicalCount}`;
+        const solutionContainer = document.createElement('div');
+        solutionContainer.className = 'solution-text-container';
+        practicalContainer.innerHTML = `<h2>Practical No: ${currentPracticalNo}<button class="edit-button" onclick="openEditModal(${practicalCount})">Edit</button><button class="delete-button" onclick="deletePractical(${practicalCount})">Delete</button></h2><p>${questionText}</p>`;
+        practicalContainer.appendChild(solutionContainer);
         outputElement.appendChild(practicalContainer);
+        solutionContainer.innerHTML = '<div class="loader"></div>';
 
         try {
             const response = await fetch('/api/solve', {
@@ -110,25 +187,26 @@ document.getElementById('solve-button').addEventListener('click', async () => {
             const data = await response.json();
             const solutionText = data.candidates[0].content.parts[0].text;
 
+            solutionContainer.innerHTML = marked.parse(solutionText);
+
             const newPractical = {
                 question: questionText,
                 solution: solutionText,
-                practicalNo: practicalCount + 1
+                practicalNo: currentPracticalNo
             };
             conversationHistory.push(newPractical);
             saveSession();
 
-            const htmlSolution = marked.parse(solutionText);
-            practicalContainer.innerHTML = `<h2>Practical No: ${newPractical.practicalNo}</h2><p>${newPractical.question}</p>${htmlSolution}`;
             hljs.highlightAll();
             addCopyButtons();
 
             practicalCount++;
             wordButton.style.display = 'block';
             document.getElementById('clear-button').style.display = 'block';
+            document.getElementById('export-button').style.display = 'block';
 
         } catch (error) {
-            practicalContainer.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            solutionContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
             console.error("Fetch Error:", error);
         }
     }
@@ -141,6 +219,35 @@ document.getElementById('clear-button').addEventListener('click', () => {
     document.getElementById('solution-output').innerHTML = '<p>Your solution will appear here. The more detailed your question, the better the answer.</p>';
     document.getElementById('convert-to-word').style.display = 'none';
     document.getElementById('clear-button').style.display = 'none';
+    document.getElementById('export-button').style.display = 'none';
+});
+
+document.getElementById('export-button').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(conversationHistory, null, 2)], { type: 'application/json' });
+    saveAs(blob, 'session.json');
+});
+
+document.getElementById('import-file').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const importedHistory = JSON.parse(e.target.result);
+            if (Array.isArray(importedHistory)) {
+                conversationHistory = importedHistory;
+                practicalCount = conversationHistory.length;
+                saveSession();
+                renderHistory();
+            } else {
+                alert('Invalid session file.');
+            }
+        } catch (err) {
+            alert('Error reading session file.');
+        }
+    };
+    reader.readAsText(file);
 });
 
 
@@ -197,3 +304,8 @@ document.getElementById('convert-to-word').addEventListener('click', () => {
 
     saveAs(blob, `Full_Assignment_Solution.doc`); 
 });
+
+const modal = document.getElementById('edit-modal');
+const closeButton = document.querySelector('.close-button');
+closeButton.onclick = () => { modal.style.display = 'none'; };
+window.onclick = (event) => { if (event.target == modal) { modal.style.display = 'none'; } };
