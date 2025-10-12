@@ -250,15 +250,7 @@ document.getElementById('import-file').addEventListener('change', (event) => {
     reader.readAsText(file);
 });
 
-
-// --- WORD DOWNLOAD FUNCTIONALITY ---
-
-document.getElementById('convert-to-word').addEventListener('click', () => {
-    if (conversationHistory.length === 0) {
-        alert("Please generate a solution first.");
-        return;
-    }
-
+function getDownloadContent() {
     let allPracticalsHtml = '';
     conversationHistory.forEach(practical => {
         allPracticalsHtml += `
@@ -271,7 +263,7 @@ document.getElementById('convert-to-word').addEventListener('click', () => {
         `;
     });
 
-    let content = `
+    return `
         <html>
         <head>
             <meta charset="utf-8">
@@ -297,12 +289,53 @@ document.getElementById('convert-to-word').addEventListener('click', () => {
         </body>
         </html>
     `;
+}
 
+function downloadAsWord() {
+    const content = getDownloadContent();
     const blob = new Blob(['\ufeff', content], {
         type: 'application/msword;charset=utf-8'
     });
+    saveAs(blob, `Full_Assignment_Solution.doc`);
+}
 
-    saveAs(blob, `Full_Assignment_Solution.doc`); 
+function downloadAsPdf() {
+    const content = getDownloadContent();
+    const options = {
+        margin: 1,
+        filename: 'Full_Assignment_Solution.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    html2pdf().from(content).set(options).save();
+}
+
+document.getElementById('convert-to-word').addEventListener('click', () => {
+    if (conversationHistory.length === 0) {
+        alert("Please generate a solution first.");
+        return;
+    }
+
+    Swal.fire({
+        title: 'Select Download Format',
+        input: 'select',
+        inputOptions: {
+            'word': 'Word (.doc)',
+            'pdf': 'PDF (.pdf)'
+        },
+        inputPlaceholder: 'Select a format',
+        showCancelButton: true,
+        confirmButtonText: 'Download',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            if (result.value === 'word') {
+                downloadAsWord();
+            } else if (result.value === 'pdf') {
+                downloadAsPdf();
+            }
+        }
+    });
 });
 
 const modal = document.getElementById('edit-modal');
