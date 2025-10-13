@@ -383,9 +383,9 @@ document.getElementById('import-file').addEventListener('change', (event) => {
 
 function getDownloadContent() {
     let allPracticalsHtml = '';
-    conversationHistory.forEach(practical => {
+    conversationHistory.forEach((practical, index) => {
         allPracticalsHtml += `
-            <div style="page-break-after: always;">
+            <div class="html2pdf__page-break">
                 <p style="font-size: 16pt;">
                     <b>Practical No: ${practical.practicalNo}</b> - <span style="font-weight: normal; font-size: 12pt;">${practical.question}</span>
                 </p>
@@ -439,7 +439,8 @@ function downloadAsPdf() {
         filename: 'Full_Assignment_Solution.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: 'avoid-all', before: '.html2pdf__page-break' } // Use html2pdf.js specific page break
     };
     html2pdf().from(content).set(options).save();
 }
