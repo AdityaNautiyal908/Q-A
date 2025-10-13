@@ -1,50 +1,30 @@
 window.addEventListener('load', () => {
     const splashScreen = document.getElementById('splash-screen');
     const splashContent = document.querySelector('.splash-content');
-    const h1 = splashContent.querySelector('h1');
-    const p = splashContent.querySelector('p');
-
-    const h1Text = h1.textContent;
-    const pText = p.textContent;
-
-    h1.textContent = '';
-    p.textContent = '';
-
-    for (let i = 0; i < h1Text.length; i++) {
-        const span = document.createElement('span');
-        span.textContent = h1Text[i];
-        span.style.display = 'inline-block';
-        h1.appendChild(span);
-    }
-
-    for (let i = 0; i < pText.length; i++) {
-        const span = document.createElement('span');
-        span.textContent = pText[i];
-        span.style.display = 'inline-block';
-        p.appendChild(span);
-    }
 
     const tl = gsap.timeline();
 
-    tl.from([h1.children, p.children], {
-        y: -100,
+    tl.from(splashContent, {
+        scale: 0.2,
         opacity: 0,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: "bounce.out"
-    }).to([h1.children, p.children], {
-        scale: 1.2,
+        duration: 1,
+        ease: "power2.out"
+    }).to(splashContent, {
+        scale: 1.5,
+        duration: 1,
+        ease: "power2.inOut"
+    }).to(splashContent, {
+        scaleY: 0,
         opacity: 0,
-        duration: 0.4,
-        stagger: 0.05,
+        duration: 0.5,
         ease: "power2.in"
-    }, "+=0.5").to(splashScreen, {
+    }).to(splashScreen, {
         opacity: 0,
         duration: 0.5,
         onComplete: () => {
             splashScreen.style.display = 'none';
         }
-    }, "-=0.2");
+    });
 
     mermaid.initialize({ startOnLoad: false });
     loadSession();
