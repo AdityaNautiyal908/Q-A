@@ -399,7 +399,7 @@ function getDownloadContent() {
     let allPracticalsHtml = '';
     conversationHistory.forEach((practical, index) => {
         allPracticalsHtml += `
-            <div class="html2pdf__page-break">
+            <div class="${index > 0 ? 'html2pdf__page-break' : ''}">
                 <p style="font-size: 16pt;">
                     <b>Practical No: ${practical.practicalNo}</b> - <span style="font-weight: normal; font-size: 12pt;">${practical.question}</span>
                 </p>
