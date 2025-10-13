@@ -161,7 +161,8 @@ function renderHistory() {
         const editButton = `<button class="edit-button" onclick="openEditModal(${index})">Edit</button>`;
         const deleteButton = `<button class="delete-button" onclick="deletePractical(${index})">Delete</button>`;
         const readAloudButton = `<button class="read-aloud-button" onclick="readAloud(${index})">Read Aloud</button>`;
-        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}${readAloudButton}</h2><p>${practical.question}</p><div class="solution-text-container">${htmlSolution}</div>`;
+        const editSolutionButton = `<button class="edit-button" onclick="openEditSolutionModal(${index})">Edit Solution</button>`;
+        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}${readAloudButton}${editSolutionButton}</h2><p>${practical.question}</p><div class="solution-text-container">${htmlSolution}</div>`;
         outputElement.appendChild(practicalContainer);
     });
     hljs.highlightAll();
@@ -191,9 +192,11 @@ function deletePractical(index) {
 
 function openEditModal(index) {
     const modal = document.getElementById('edit-modal');
+    const modalTitle = modal.querySelector('h2');
     const textarea = document.getElementById('edit-textarea');
     const saveButton = document.getElementById('save-edit-button');
 
+    modalTitle.innerText = 'Edit Question';
     textarea.value = conversationHistory[index].question;
     modal.style.display = 'block';
 
@@ -201,6 +204,28 @@ function openEditModal(index) {
         rerunQuestion(index, textarea.value);
         modal.style.display = 'none';
     };
+}
+
+function openEditSolutionModal(index) {
+    const modal = document.getElementById('edit-modal');
+    const modalTitle = modal.querySelector('h2');
+    const textarea = document.getElementById('edit-textarea');
+    const saveButton = document.getElementById('save-edit-button');
+
+    modalTitle.innerText = 'Edit Solution';
+    textarea.value = conversationHistory[index].solution;
+    modal.style.display = 'block';
+
+    saveButton.onclick = () => {
+        saveEditedSolution(index, textarea.value);
+        modal.style.display = 'none';
+    };
+}
+
+function saveEditedSolution(index, newSolution) {
+    conversationHistory[index].solution = newSolution;
+    saveSession();
+    renderHistory();
 }
 
 async function rerunQuestion(index, newQuestion) {
@@ -214,7 +239,7 @@ async function rerunQuestion(index, newQuestion) {
         practicalContainer.appendChild(solutionContainer);
     }
     
-    practicalContainer.innerHTML = `<h2>Practical No: ${conversationHistory[index].practicalNo}<button class="edit-button" onclick="openEditModal(${index})">Edit</button><button class="delete-button" onclick="deletePractical(${index})">Delete</button></h2><p>${newQuestion}</p>`;
+    practicalContainer.innerHTML = `<h2>Practical No: ${conversationHistory[index].practicalNo}<button class="edit-button" onclick="openEditModal(${index})">Edit</button><button class="delete-button" onclick="deletePractical(${index})">Delete</button><button class="edit-button" onclick="openEditSolutionModal(${index})">Edit Solution</button></h2><p>${newQuestion}</p>`;
     practicalContainer.appendChild(solutionContainer);
     solutionContainer.innerHTML = '<div class="loader"></div>';
 
@@ -271,7 +296,7 @@ document.getElementById('solve-button').addEventListener('click', async () => {
         practicalContainer.id = `practical-${practicalCount}`;
         const solutionContainer = document.createElement('div');
         solutionContainer.className = 'solution-text-container';
-        practicalContainer.innerHTML = `<h2>Practical No: ${currentPracticalNo}<button class="edit-button" onclick="openEditModal(${practicalCount})">Edit</button><button class="delete-button" onclick="deletePractical(${practicalCount})">Delete</button></h2><p>${questionText}</p>`;
+        practicalContainer.innerHTML = `<h2>Practical No: ${currentPracticalNo}<button class="edit-button" onclick="openEditModal(${practicalCount})">Edit</button><button class="delete-button" onclick="deletePractical(${currentPracticalNo - 1})">Delete</button><button class="edit-button" onclick="openEditSolutionModal(${practicalCount})">Edit Solution</button></h2><p>${questionText}</p>`;
         practicalContainer.appendChild(solutionContainer);
         outputElement.appendChild(practicalContainer);
         solutionContainer.innerHTML = '<div class="loader"></div>';
