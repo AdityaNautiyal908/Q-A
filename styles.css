@@ -263,6 +263,7 @@ button, .button {
     padding: 17px 40px;
     border-radius: 8px;
     cursor: pointer;
+    color: white;
     border: 0;
     background-color: hsl(261, 80%, 48%);
     box-shadow: rgb(0 0 0 / 5%) 0 0 8px;
@@ -313,6 +314,15 @@ button, .button {
     box-shadow: rgb(148, 234, 43) 0 7px 29px 0;
     filter: brightness(1.1);
     font-weight: bolder;
+}
+
+#convert-to-word:hover:active{
+    letter-spacing: 3px;
+    background-color: #85e05b;
+    color: hsl(0, 0%, 100%);
+    box-shadow: #85e05b;
+    transform: translateY(10px);
+    transition: 100ms;
 }
 
 #convert-to-word:before,#convert-to-word:after{
@@ -383,6 +393,15 @@ button, .button {
     font-weight: bolder;
 }
 
+#clear-button:hover:active{
+    letter-spacing: 3px;
+    background-color: #e03939;
+    color: hsl(0, 0%, 100%);
+    box-shadow: #e03939;
+    transform: translateY(10px);
+    transition: 100ms;
+}
+
 #export-button {
     background-color: #f0ad4e;
     color: white;
@@ -393,6 +412,15 @@ button, .button {
     box-shadow: rgb(241, 206, 91) 0 7px 29px 0;
     filter: brightness(1.1);
     font-weight: bolder;
+}
+
+#export-button:hover:active{
+    letter-spacing: 3px;
+    background-color: #eab367;
+    color: hsl(0, 0%, 100%);
+    box-shadow: #eab367;
+    transform: translateY(10px);
+    transition: 100ms;
 }
 
 #import-label {
@@ -406,6 +434,15 @@ button, .button {
     box-shadow: rgb(78, 217, 212) 0 7px 29px 0;
     filter: brightness(1.1);
     font-weight: bolder;
+}
+
+#import-label:active{
+    letter-spacing: 3px;
+    background-color: #85d2e9;
+    color: hsl(0, 0%, 100%);
+    box-shadow: #85d2e9;
+    transform: translateY(10px);
+    transition: 100ms;
 }
 
 .edit-button {
