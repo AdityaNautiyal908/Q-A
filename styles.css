@@ -278,6 +278,7 @@ button, .button {
     box-shadow: rgb(93 24 220) 0 7px 29px 0;
     filter: brightness(1.1);
     font-weight: bolder;
+    transform: translateY(-2px);
 }
 
 #solve-button:active {
@@ -307,6 +308,11 @@ button, .button {
 #convert-to-word:hover{
     background-color:#45a21a;
     color:white;
+    background-color: #85e05b;
+    transform: translateY(-2px);
+    box-shadow: rgb(148, 234, 43) 0 7px 29px 0;
+    filter: brightness(1.1);
+    font-weight: bolder;
 }
 
 #convert-to-word:before,#convert-to-word:after{
@@ -370,18 +376,36 @@ button, .button {
 }
 
 #clear-button:hover {
-    background-color: #ff3d3d;
+    background-color: #e03939;
     transform: translateY(-2px);
+    box-shadow: rgb(234, 43, 72) 0 7px 29px 0;
+    filter: brightness(1.1);
+    font-weight: bolder;
 }
 
 #export-button {
     background-color: #f0ad4e;
     color: white;
 }
+#export-button:hover{
+    background-color: #eab367;
+    transform: translateY(-2px);
+    box-shadow: rgb(241, 206, 91) 0 7px 29px 0;
+    filter: brightness(1.1);
+    font-weight: bolder;
+}
 
 #import-label {
     background-color: #5bc0de;
     color: white;
+}
+
+#import-label:hover {
+    background-color: #85d2e9;
+    transform: translateY(-2px);
+    box-shadow: rgb(78, 217, 212) 0 7px 29px 0;
+    filter: brightness(1.1);
+    font-weight: bolder;
 }
 
 .edit-button {
@@ -392,6 +416,12 @@ button, .button {
     margin-left: 10px;
 }
 
+.edit-button:hover {
+    background-color: rgb(108, 132, 209);
+    box-shadow: rgb(78, 147, 217) 0 7px 29px 0;
+    filter: brightness(1.1);
+}
+
 .delete-button {
     background-color: var(--error-color);
     color: white;
@@ -400,12 +430,24 @@ button, .button {
     margin-left: 10px;
 }
 
+.delete-button:hover {
+    background-color: rgb(234, 70, 70);
+    box-shadow: rgb(237, 115, 101) 0 7px 29px 0;
+    filter: brightness(1.1);
+}
+
 .read-aloud-button {
     background-color: var(--primary-color);
     color: white;
     padding: 5px 10px;
     font-size: 12px;
     margin-left: 10px;
+}
+
+.read-aloud-button:hover {
+    background-color: rgb(147, 105, 243);
+    box-shadow: rgb(103, 105, 246) 0 7px 29px 0;
+    filter: brightness(1.1);
 }
 
 .modal {
