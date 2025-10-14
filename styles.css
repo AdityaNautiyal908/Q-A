@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
 :root {
@@ -271,7 +270,7 @@ button, .button {
     padding: 17px 40px;
     border-radius: 8px;
     cursor: pointer;
-    color: white;
+    color: black;
     border: 0;
     background-color: hsl(261, 80%, 48%);
     box-shadow: rgb(0 0 0 / 5%) 0 0 8px;
@@ -304,7 +303,7 @@ button, .button {
     position:relative;
     padding:10px 25px;
     background-color:#4CC713;
-    color:white;
+    color: black;
     font-family:sans-serif;
     text-decoration:none;
     font-size:.9em;
@@ -390,7 +389,7 @@ button, .button {
 
 #clear-button {
     background-color: var(--error-color);
-    color: white;
+    color: black;
 }
 
 #clear-button:hover {
@@ -399,6 +398,7 @@ button, .button {
     box-shadow: rgb(234, 43, 72) 0 7px 29px 0;
     filter: brightness(1.1);
     font-weight: bolder;
+    color: white;
 }
 
 #clear-button:hover:active{
@@ -412,7 +412,7 @@ button, .button {
 
 #export-button {
     background-color: #f0ad4e;
-    color: white;
+    color: black;
 }
 #export-button:hover{
     background-color: #eab367;
@@ -420,6 +420,7 @@ button, .button {
     box-shadow: rgb(241, 206, 91) 0 7px 29px 0;
     filter: brightness(1.1);
     font-weight: bolder;
+    color: white;
 }
 
 #export-button:hover:active{
@@ -433,7 +434,7 @@ button, .button {
 
 #import-label {
     background-color: #5bc0de;
-    color: white;
+    color: black;
 }
 
 #import-label:hover {
@@ -442,6 +443,7 @@ button, .button {
     box-shadow: rgb(78, 217, 212) 0 7px 29px 0;
     filter: brightness(1.1);
     font-weight: bolder;
+    color: white;
 }
 
 #import-label:active{
@@ -455,7 +457,7 @@ button, .button {
 
 .edit-button {
     background-color: var(--secondary-color);
-    color: white;
+    color: black;
     padding: 5px 10px;
     font-size: 12px;
     margin-left: 10px;
@@ -465,11 +467,12 @@ button, .button {
     background-color: rgb(108, 132, 209);
     box-shadow: rgb(78, 147, 217) 0 7px 29px 0;
     filter: brightness(1.1);
+    color: white;
 }
 
 .delete-button {
     background-color: var(--error-color);
-    color: white;
+    color: black;
     padding: 5px 10px;
     font-size: 12px;
     margin-left: 10px;
@@ -479,11 +482,12 @@ button, .button {
     background-color: rgb(234, 70, 70);
     box-shadow: rgb(237, 115, 101) 0 7px 29px 0;
     filter: brightness(1.1);
+    color: white;
 }
 
 .read-aloud-button {
     background-color: var(--primary-color);
-    color: white;
+    color: black;
     padding: 5px 10px;
     font-size: 12px;
     margin-left: 10px;
@@ -493,6 +497,7 @@ button, .button {
     background-color: rgb(147, 105, 243);
     box-shadow: rgb(103, 105, 246) 0 7px 29px 0;
     filter: brightness(1.1);
+    color: white;
 }
 
 .modal {
@@ -690,4 +695,18 @@ hr {
         height: calc(100% - 120px);
         min-height: 150px;
     }
+}
+
+body.light-mode #solve-button,
+body.light-mode #convert-to-word,
+body.light-mode #clear-button,
+body.light-mode #export-button,
+body.light-mode #import-label {
+    color: white;
+}
+
+body.light-mode .edit-button,
+body.light-mode .delete-button,
+body.light-mode .read-aloud-button {
+    color: white;
 }
