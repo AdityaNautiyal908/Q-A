@@ -305,6 +305,9 @@ async function rerunQuestion(index, newQuestion) {
     }
 }
 
+const scrollToSolutionButton = document.getElementById('scroll-to-solution-button');
+let latestSolutionId = null;
+
 document.getElementById('solve-button').addEventListener('click', async () => {
     const allQuestionsText = document.getElementById('question-input').value;
     const outputElement = document.getElementById('solution-output');
@@ -370,6 +373,9 @@ document.getElementById('solve-button').addEventListener('click', async () => {
             document.getElementById('clear-button').style.display = 'block';
             document.getElementById('export-button').style.display = 'block';
 
+            latestSolutionId = `practical-${practicalCount - 1}`;
+            scrollToSolutionButton.style.display = 'flex';
+
         } catch (error) {
             solutionContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
             console.error("Fetch Error:", error);
@@ -392,6 +398,22 @@ document.getElementById('solve-button').addEventListener('click', async () => {
 
     document.getElementById('question-input').value = '';
 });
+
+scrollToSolutionButton.addEventListener('click', () => {
+    if (latestSolutionId) {
+        const element = document.getElementById(latestSolutionId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+    scrollToSolutionButton.style.display = 'none';
+});
+
+window.addEventListener('scroll', () => {
+    if (scrollToSolutionButton.style.display === 'flex') {
+        scrollToSolutionButton.style.display = 'none';
+    }
+}, { passive: true });
 
 document.getElementById('clear-button').addEventListener('click', () => {
     conversationHistory = [];
@@ -479,7 +501,7 @@ function downloadAsWord() {
     const blob = new Blob(['\ufeff', content], {
         type: 'application/msword;charset=utf-8'
     });
-    saveAs(blob, `Full_Assignment_Solution.doc`);
+    saveAs(blob, 'Full_Assignment_Solution.doc');
 }
 
 function downloadAsPdf() {
@@ -490,7 +512,7 @@ function downloadAsPdf() {
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-        pagebreak: { mode: 'avoid-all', before: '.html2pdf__page-break' } // Use html2pdf.js specific page break
+        pagebreak: { mode: 'avoid-all', before: '.html2pdf__page-break' } 
     };
     html2pdf().from(content).set(options).save();
 }

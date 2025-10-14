@@ -731,3 +731,29 @@ body.light-mode .delete-button,
 body.light-mode .read-aloud-button {
     color: white;
 }
+
+.floating-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    z-index: 1000;
+    transition: transform 0.3s;
+}
+
+.floating-button svg {
+    width: 50px;
+    height: 50px;
+    fill: var(--success-color);
+}
+
+.floating-button:hover {
+    transform: scale(1.1);
+}
+
+.floating-button:hover svg {
+    fill: #00a746;
+}
