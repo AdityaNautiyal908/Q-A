@@ -309,6 +309,7 @@ const scrollToSolutionButton = document.getElementById('scroll-to-solution-butto
 let latestSolutionId = null;
 
 document.getElementById('solve-button').addEventListener('click', async () => {
+    const solveButton = document.getElementById('solve-button');
     const allQuestionsText = document.getElementById('question-input').value;
     const outputElement = document.getElementById('solution-output');
     const wordButton = document.getElementById('convert-to-word');
@@ -318,6 +319,9 @@ document.getElementById('solve-button').addEventListener('click', async () => {
         outputElement.innerHTML = '<p style="color: red;">Please enter a question to solve.</p>';
         return;
     }
+
+    solveButton.disabled = true;
+    solveButton.innerHTML = '<div class="loader-small"></div> Generating...';
 
     const questions = allQuestionsText.split('\n').filter(q => q.trim() !== '');
 
@@ -397,6 +401,8 @@ document.getElementById('solve-button').addEventListener('click', async () => {
     });
 
     document.getElementById('question-input').value = '';
+    solveButton.disabled = false;
+    solveButton.innerHTML = 'Get Solution';
 });
 
 scrollToSolutionButton.addEventListener('click', () => {
