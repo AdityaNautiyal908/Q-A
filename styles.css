@@ -748,6 +748,7 @@ body.light-mode .read-aloud-button {
     width: 50px;
     height: 50px;
     fill: var(--success-color);
+    animation: bounce-and-glow 2s infinite;
 }
 
 .floating-button:hover {
@@ -756,4 +757,15 @@ body.light-mode .read-aloud-button {
 
 .floating-button:hover svg {
     fill: #00a746;
+}
+
+@keyframes bounce-and-glow {
+    0%, 100% {
+        transform: translateY(0);
+        fill: var(--success-color);
+    }
+    50% {
+        transform: translateY(-10px);
+        fill: #00ff7f;
+    }
 }
