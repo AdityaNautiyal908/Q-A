@@ -389,6 +389,8 @@ document.getElementById('solve-button').addEventListener('click', async () => {
             toast.addEventListener('mouseleave', Swal.resumeTimer);
         }
     });
+
+    document.getElementById('question-input').value = '';
 });
 
 document.getElementById('clear-button').addEventListener('click', () => {
