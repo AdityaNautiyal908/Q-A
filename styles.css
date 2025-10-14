@@ -207,23 +207,34 @@ p.subtitle {
     margin-bottom: 20px;
 }
 
-.icon-button {
+.icon-button-wrapper {
     position: absolute;
     bottom: 15px;
+    perspective: 1000px;
+    transform-style: preserve-3d;
+}
+
+.icon-button {
     background: none;
     border: none;
     font-size: 7px;
     cursor: pointer;
     padding: 10px;
     color: var(--subtle-text-color);
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.icon-button-wrapper:hover .icon-button {
+    transform: translateZ(50px) scale(1.2);
 }
 
 #mic-button {
-    right: 15px;
+    /* right: 15px; */
 }
 
 #image-upload-label {
-    right: 60px;
+    /* right: 60px; */
 }
 
 #mic-button.is-listening {
