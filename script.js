@@ -30,9 +30,18 @@ window.addEventListener('load', () => {
     loadSession();
 });
 
-const themeSwitch = document.getElementById('checkbox');
-themeSwitch.addEventListener('change', () => {
-    document.body.classList.toggle('light-mode');
+const themeToggle = document.getElementById('theme-toggle');
+
+themeToggle.addEventListener('click', (e) => {
+    const isLight = document.body.classList.contains('light-mode');
+    
+    if (document.startViewTransition) {
+        document.startViewTransition(() => {
+            document.body.classList.toggle('light-mode');
+        });
+    } else {
+        document.body.classList.toggle('light-mode');
+    }
 });
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

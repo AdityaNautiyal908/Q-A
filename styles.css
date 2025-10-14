@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
 :root {
@@ -92,51 +93,62 @@ body {
     align-items: center;
 }
 
-.theme-switch {
-    display: inline-block;
-    height: 34px;
-    position: relative;
-    width: 60px;
-}
-
-.theme-switch input { display: none; }
-
-.slider {
-    background-color: #ccc;
-    bottom: 0;
+#theme-toggle {
     cursor: pointer;
-    left: 0;
+    position: relative;
+    width: 24px;
+    height: 24px;
+}
+
+.sun-icon, .moon-icon {
     position: absolute;
-    right: 0;
-    top: 0;
-    transition: .4s;
+    transition: transform 0.5s ease, opacity 0.5s ease;
 }
 
-.slider:before {
-    background-color: #fff;
-    bottom: 4px;
-    content: "";
-    height: 26px;
-    left: 4px;
-    position: absolute;
-    transition: .4s;
-    width: 26px;
+.sun-icon {
+    transform: scale(1);
+    opacity: 1;
 }
 
-input:checked + .slider {
-    background-color: var(--primary-color);
+.moon-icon {
+    transform: scale(0);
+    opacity: 0;
 }
 
-input:checked + .slider:before {
-    transform: translateX(26px);
+body.light-mode .sun-icon {
+    transform: scale(0);
+    opacity: 0;
 }
 
-.slider.round {
-    border-radius: 34px;
+body.light-mode .moon-icon {
+    transform: scale(1);
+    opacity: 1;
 }
 
-.slider.round:before {
-    border-radius: 50%;
+::view-transition-old(root) {
+    animation: 90ms cubic-bezier(0.4, 0, 1, 1) both fade-out;
+}
+
+::view-transition-new(root) {
+    animation: 210ms cubic-bezier(0, 0, 0.2, 1) 90ms both fade-in;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
 }
 
 .container {
