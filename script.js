@@ -35,6 +35,12 @@ const themeToggle = document.getElementById('theme-toggle');
 themeToggle.addEventListener('click', (e) => {
     const isLight = document.body.classList.contains('light-mode');
     
+    const x = e.clientX;
+    const y = e.clientY;
+
+    document.documentElement.style.setProperty('--x', x + 'px');
+    document.documentElement.style.setProperty('--y', y + 'px');
+
     if (document.startViewTransition) {
         document.startViewTransition(() => {
             document.body.classList.toggle('light-mode');
