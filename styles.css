@@ -270,7 +270,7 @@ button, .button {
     padding: 17px 40px;
     border-radius: 8px;
     cursor: pointer;
-    color: black;
+    color: rgb(255, 255, 255);
     border: 0;
     background-color: hsl(261, 80%, 48%);
     box-shadow: rgb(0 0 0 / 5%) 0 0 8px;
@@ -303,7 +303,7 @@ button, .button {
     position:relative;
     padding:10px 25px;
     background-color:#4CC713;
-    color: black;
+    color: rgb(255, 255, 255);
     font-family:sans-serif;
     text-decoration:none;
     font-size:.9em;
@@ -389,7 +389,7 @@ button, .button {
 
 #clear-button {
     background-color: var(--error-color);
-    color: black;
+    color: rgb(255, 255, 255);
 }
 
 #clear-button:hover {
@@ -412,7 +412,7 @@ button, .button {
 
 #export-button {
     background-color: #f0ad4e;
-    color: black;
+    color: rgb(255, 255, 255);
 }
 #export-button:hover{
     background-color: #eab367;
@@ -434,7 +434,7 @@ button, .button {
 
 #import-label {
     background-color: #5bc0de;
-    color: black;
+    color: rgb(255, 255, 255);
 }
 
 #import-label:hover {
