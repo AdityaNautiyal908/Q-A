@@ -306,6 +306,7 @@ async function rerunQuestion(index, newQuestion) {
 }
 
 const scrollToSolutionButton = document.getElementById('scroll-to-solution-button');
+const scrollToTopButton = document.getElementById('scroll-to-top-button');
 let latestSolutionId = null;
 
 document.getElementById('solve-button').addEventListener('click', async () => {
@@ -415,9 +416,22 @@ scrollToSolutionButton.addEventListener('click', () => {
     scrollToSolutionButton.style.display = 'none';
 });
 
+scrollToTopButton.addEventListener('click', () => {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+});
+
 window.addEventListener('scroll', () => {
     if (scrollToSolutionButton.style.display === 'flex') {
         scrollToSolutionButton.style.display = 'none';
+    }
+
+    if (window.scrollY > 200) {
+        scrollToTopButton.style.display = 'flex';
+    } else {
+        scrollToTopButton.style.display = 'none';
     }
 }, { passive: true });
 
