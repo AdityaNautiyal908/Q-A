@@ -583,7 +583,7 @@ function startTour() {
 
     tour.addStep({
         title: 'Welcome to Ace Q&A!',
-        text: 'This is a quick tour to get you started. You can skip this at any time.',
+        text: 'This is a quick tour to get you started.',
         attachTo: {
             element: '.container',
             on: 'top'
@@ -594,12 +594,6 @@ function startTour() {
                     return this.next();
                 },
                 text: 'Next'
-            },
-            {
-                action() {
-                    return this.complete();
-                },
-                text: 'Finish'
             }
         ]
     });
