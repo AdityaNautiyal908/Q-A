@@ -6,7 +6,7 @@ const puppeteer = require('puppeteer');
 require('dotenv').config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 const RAPIDAPI_KEY = process.env.ONECOMPILER_API_KEY; 
 const RAPIDAPI_HOST = 'onecompiler-apis.p.rapidapi.com';
@@ -138,6 +138,6 @@ app.post('/api/capture-screenshot', async (req, res) => {
 
 
 const server = app.listen(port, () => {
-    console.log(`Server listening at http://localhost:${port}`);
+    console.log(`Server listening on port ${port}`);
 });
 server.timeout = 300000; // 5 minutes timeout
