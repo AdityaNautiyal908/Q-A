@@ -101,7 +101,7 @@ let practicalCount = 0;
 let activeReadAloudButton = null;
 
 function addCopyButtons() {
-    const codeBlocks = document.querySelectorAll('.markdown-body pre');
+    const codeBlocks = document.querySelectorAll('.solution-text-container pre');
     codeBlocks.forEach(block => {
         if (block.querySelector('.copy-button')) return;
         const button = document.createElement('button');
@@ -199,12 +199,13 @@ function renderHistory() {
         const deleteButton = `<button class="delete-button" onclick="deletePractical(${index})">Delete</button>`;
         const readAloudButton = `<button class="read-aloud-button" onclick="readAloud(${index})">Read Aloud</button>`;
         const editSolutionButton = `<button class="edit-button" onclick="openEditSolutionModal(${index})">Edit Solution</button>`;
-        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}${readAloudButton}${editSolutionButton}</h2><p>${practical.question}</p><div class="solution-text-container">${htmlSolution}</div>`;
+        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}${readAloudButton}${editSolutionButton}</h2><p>${practical.question}</p><div class="solution-text-container markdown-body">${htmlSolution}</div>`;
         outputElement.appendChild(practicalContainer);
     });
     hljs.highlightAll();
     addCopyButtons();
     addReadAloudButtons();
+    addRunCodeButtons();
     renderMermaidDiagrams();
     if (conversationHistory.length > 0) {
         document.getElementById('convert-to-word').style.display = 'block';
@@ -272,7 +273,7 @@ async function rerunQuestion(index, newQuestion) {
     let solutionContainer = practicalContainer.querySelector('.solution-text-container');
     if (!solutionContainer) {
         solutionContainer = document.createElement('div');
-        solutionContainer.className = 'solution-text-container';
+        solutionContainer.className = 'solution-text-container markdown-body';
         practicalContainer.appendChild(solutionContainer);
     }
     
@@ -301,6 +302,7 @@ async function rerunQuestion(index, newQuestion) {
         hljs.highlightAll();
         addCopyButtons();
         addReadAloudButtons();
+        addRunCodeButtons();
         renderMermaidDiagrams();
 
     } catch (error) {
@@ -340,7 +342,7 @@ document.getElementById('solve-button').addEventListener('click', async () => {
         const practicalContainer = document.createElement('div');
         practicalContainer.id = `practical-${practicalCount}`;
         const solutionContainer = document.createElement('div');
-        solutionContainer.className = 'solution-text-container';
+        solutionContainer.className = 'solution-text-container markdown-body';
         practicalContainer.innerHTML = `<h2>Practical No: ${currentPracticalNo}<button class="edit-button" onclick="openEditModal(${practicalCount})">Edit</button><button class="delete-button" onclick="deletePractical(${currentPracticalNo - 1})">Delete</button><button class="edit-button" onclick="openEditSolutionModal(${practicalCount})">Edit Solution</button></h2><p>${questionText}</p>`;
         practicalContainer.appendChild(solutionContainer);
         outputElement.appendChild(practicalContainer);
@@ -374,6 +376,7 @@ document.getElementById('solve-button').addEventListener('click', async () => {
             hljs.highlightAll();
             addCopyButtons();
             addReadAloudButtons();
+            addRunCodeButtons();
             renderMermaidDiagrams();
 
             practicalCount++;
@@ -475,6 +478,164 @@ document.getElementById('import-file').addEventListener('change', (event) => {
     };
     reader.readAsText(file);
 });
+
+function addRunCodeButtons() {
+    const codeBlocks = document.querySelectorAll('.solution-text-container pre');
+    codeBlocks.forEach((block, index) => {
+        if (block.querySelector('.run-code-button')) return;
+        const runButton = document.createElement('button');
+        runButton.innerText = 'Run Code';
+        runButton.className = 'run-code-button';
+        runButton.onclick = () => runCode(block, index);
+
+        block.prepend(runButton);
+
+        const outputContainer = document.createElement('div');
+        outputContainer.className = 'code-output-container';
+        outputContainer.id = `code-output-${index}`;
+        block.after(outputContainer);
+
+        const imagePreviewContainer = document.createElement('div');
+        imagePreviewContainer.className = 'image-preview-container';
+        imagePreviewContainer.id = `image-preview-container-${index}`;
+        outputContainer.after(imagePreviewContainer);
+    });
+}
+
+async function runCode(block, index) {
+    const code = block.querySelector('code').innerText;
+    const language = guessLanguageFromCode(code);
+    
+    const outputContainer = document.getElementById(`code-output-${index}`);
+    outputContainer.innerHTML = '<div class="loader"></div>';
+
+    try {
+        let files = (language === 'html') ? extractWebFiles(code) : [{ name: "index.js", content: code }];
+
+        const payload = { language: language, stdin: "", files: files };
+
+        const response = await fetch('/api/run-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Proxy Error: Server returned status ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (language === 'html') {
+            const outputUrl = result.stdout;
+            if (outputUrl) {
+                outputContainer.innerHTML = `<iframe src="${outputUrl}" style="width: 100%; height: 300px; border: none;"></iframe>`;
+                addCaptureButton(outputContainer, outputUrl, index);
+            } else {
+                 outputContainer.innerHTML = `<p style="color: red;">ERROR: Failed to render HTML. Check if it's valid: ${result.stderr || result.exception}</p>`;
+            }
+        } else if (result.exception || result.stderr) {
+            outputContainer.textContent = `ERROR:\n${result.stderr || result.exception}`;
+        } else {
+            outputContainer.textContent = result.stdout;
+            addCaptureButton(outputContainer, null, index);
+        }
+
+    } catch (error) {
+        console.error("Code Execution Failed:", error);
+        outputContainer.textContent = `CONNECTION FAILED. Ensure 'server.js' is running on port 3000.`;
+    }
+}
+
+function addCaptureButton(outputContainer, url, index) {
+    const captureButton = document.createElement('button');
+    captureButton.innerText = 'Generate Output Image';
+    captureButton.className = 'capture-output-button';
+    captureButton.onclick = () => captureOutput(outputContainer, url, index);
+    outputContainer.prepend(captureButton);
+}
+
+async function captureOutput(outputContainer, url, index) {
+    const imagePreviewContainer = document.getElementById(`image-preview-container-${index}`);
+    imagePreviewContainer.innerHTML = '<div class="loader"></div>';
+
+    try {
+        if (url) {
+            // --- SERVER-SIDE CAPTURE (for HTML) ---
+            const response = await fetch('/api/capture-screenshot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || result.error) {
+                throw new Error(result.error || `Server responded with status ${response.status}`);
+            }
+            
+            const imageDataURL = `data:image/png;base64,${result.image}`;
+            imagePreviewContainer.innerHTML = `<img src="${imageDataURL}" class="max-w-full h-auto rounded-lg shadow-md" alt="Generated Code Output Image">`;
+
+        } else {
+            // --- STANDARD CONSOLE CAPTURE (for all console languages) ---
+            const canvas = await html2canvas(outputContainer, {
+                backgroundColor: window.getComputedStyle(outputContainer).backgroundColor,
+                scale: 2 
+            });
+
+            const imageDataURL = canvas.toDataURL('image/png');
+            imagePreviewContainer.innerHTML = `<img src="${imageDataURL}" class="max-w-full h-auto rounded-lg shadow-md" alt="Generated Code Output Image">`;
+        }
+    } catch (error) {
+        console.error('Capture Failed:', error);
+        imagePreviewContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+    }
+}
+
+function extractTagContent(tag, fullCode) {
+    const regex = new RegExp('<' + tag + '\b[^>]*>([\s\S]*?)<\/' + tag + '>', 'ig');
+    let content = '';
+    let match;
+    while ((match = regex.exec(fullCode)) !== null) {
+        content += match[1].trim() + '\n';
+    }
+    return content.trim();
+}
+
+function extractWebFiles(fullCode) {
+    const files = [];
+    
+    const cssContent = extractTagContent('style', fullCode);
+    const jsContent = extractTagContent('script', fullCode);
+
+    let htmlContent = fullCode
+        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/ig, '')
+        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/ig, '')
+        .trim();
+
+    if (htmlContent) { files.push({ name: "index.html", content: htmlContent }); }
+    if (cssContent) { files.push({ name: "styles.css", content: cssContent }); }
+    if (jsContent) { files.push({ name: "script.js", content: jsContent }); }
+    
+    if (files.length === 0 && fullCode.trim().length > 0) {
+         files.push({ name: "index.html", content: fullCode });
+    }
+    
+    return files;
+}
+
+function guessLanguageFromCode(code) {
+    const normalizedCode = code.trim().toLowerCase();
+    if (normalizedCode.includes('<!doctype html') || normalizedCode.includes('<html') || normalizedCode.includes('</body')) return 'html'; 
+    if (normalizedCode.includes('def ') || normalizedCode.includes('print(') || normalizedCode.includes('elif ') || normalizedCode.includes('import ')) return 'python';
+    if (normalizedCode.includes('console.log') || normalizedCode.includes('const ') || normalizedCode.includes('let ') || normalizedCode.includes('function ')) return 'javascript';
+    if (normalizedCode.includes('public static void main') && normalizedCode.includes('system.out.println')) return 'java';
+    if (normalizedCode.includes('#include <iostream>') || normalizedCode.includes('std::cout')) return 'cpp';
+    if (normalizedCode.includes('#include <stdio.h>') && normalizedCode.includes('printf')) return 'c';
+    if (normalizedCode.includes('using system;') || normalizedCode.includes('console.writeline')) return 'csharp';
+    return 'python'; // Default to python
+}
 
 function getDownloadContent() {
     let allPracticalsHtml = '';

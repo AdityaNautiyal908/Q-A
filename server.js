@@ -1,12 +1,19 @@
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
+const cors = require('cors');
+const puppeteer = require('puppeteer');
 require('dotenv').config();
 
 const app = express();
 const port = 3000;
 
-app.use(express.json());
+const RAPIDAPI_KEY = process.env.ONECOMPILER_API_KEY; 
+const RAPIDAPI_HOST = 'onecompiler-apis.p.rapidapi.com';
+const API_ENDPOINT_ONECOMPILER = 'https://onecompiler-apis.p.rapidapi.com/api/v1/run';
+
+app.use(cors());
+app.use(express.json({ limit: '5mb' }));
 app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
@@ -44,6 +51,93 @@ app.post('/api/solve', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
+// ----------------------------------------------------------------------
+// 1. RUN CODE ENDPOINT (Handles Python, Java, C++, etc.)
+// ----------------------------------------------------------------------
+app.post('/api/run-code', async (req, res) => {
+    try {
+        const payload = req.body;
+
+        // Use Axios to securely call the external OneCompiler API
+        const apiResponse = await axios.post(API_ENDPOINT_ONECOMPILER, payload, {
+            headers: {
+                'X-RapidAPI-Key': RAPIDAPI_KEY,
+                'X-RapidAPI-Host': RAPIDAPI_HOST,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        // Forward the API result (stdout, stderr, etc.) back to the browser
+        res.json(apiResponse.data);
+
+    } catch (error) {
+        console.error('Proxy Error:', error);
+
+        // If the error has a response object (e.g., a 403 from RapidAPI), return that status
+        if (error.response) {
+            return res.status(error.response.status).json(error.response.data);
+        }
+
+        // General server error
+        res.status(500).json({ error: 'Internal Server Error during code execution.' });
+    }
+});
+
+// ----------------------------------------------------------------------
+// 2. SCREENSHOT ENDPOINT (Handles HTML/Web Page Capture using Puppeteer)
+// ----------------------------------------------------------------------
+app.post('/api/capture-screenshot', async (req, res) => {
+    const { url } = req.body;
+    if (!url) { return res.status(400).json({ error: 'Missing URL parameter.' }); }
+
+    let browser;
+    console.log(`[CAPTURE] Attempting screenshot for URL: ${url}`);
+
+    try {
+        // Launch a headless Chromium browser instance
+        browser = await puppeteer.launch({
+             headless: 'new',
+             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+             timeout: 60000
+        });
+        console.log('[CAPTURE] Browser launched successfully.');
+
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1200, height: 800 });
+
+        // Navigate to the OneCompiler-provided URL
+        await page.goto(url, {
+            waitUntil: 'networkidle0', // Wait until the page is fully idle
+            timeout: 90000
+        });
+        console.log('[CAPTURE] Page navigated successfully.');
+
+        // Take a screenshot of the entire rendered page
+        const screenshotBuffer = await page.screenshot({
+            fullPage: true,
+            type: 'png'
+        });
+        console.log('[CAPTURE] Screenshot captured.');
+
+        // Convert the image data to Base64 for transfer back to the client
+        const base64Image = screenshotBuffer.toString('base64');
+        res.json({ image: base64Image });
+
+    } catch (error) {
+        // This catch block handles the silent launch errors we've been debugging
+        console.error('--- FATAL PUPPETEER ERROR ---');
+        console.error('Error Details:', error.message);
+        res.status(500).json({ error: 'Screenshot Failed on Server. Check Node.js console for detail.' });
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+        console.log('[CAPTURE] Browser closed.');
+    }
+});
+
+
+const server = app.listen(port, () => {
     console.log(`Server listening at http://localhost:${port}`);
 });
+server.timeout = 300000; // 5 minutes timeout

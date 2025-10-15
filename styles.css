@@ -786,3 +786,37 @@ body.light-mode .read-aloud-button {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+.run-code-button, .capture-output-button {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 5px 10px;
+    font-size: 12px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.run-code-button:hover, .capture-output-button:hover {
+    background-color: var(--secondary-color);
+}
+
+.code-output-container {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 10px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+}
+
+.image-preview-container {
+    margin-top: 10px;
+}
+
+.image-preview-container img {
+    max-width: 100%;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
