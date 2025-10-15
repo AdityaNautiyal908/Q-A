@@ -2,3 +2,5 @@
 config.js
 .env
 node_modules
+sample.html
+sample.js
