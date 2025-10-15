@@ -803,7 +803,8 @@ body.light-mode .read-aloud-button {
 }
 
 .code-output-container {
-    background-color: var(--surface-color);
+    background-color: #ffffff;
+    color: #000000;
     border: 1px solid var(--border-color);
     border-radius: 5px;
     padding: 10px;
@@ -819,4 +820,23 @@ body.light-mode .read-aloud-button {
     max-width: 100%;
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.code-input-container {
+    margin-bottom: 10px;
+}
+
+.code-input-container label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.code-input-area {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    resize: vertical;
 }

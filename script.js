@@ -486,9 +486,24 @@ function addRunCodeButtons() {
         const runButton = document.createElement('button');
         runButton.innerText = 'Run Code';
         runButton.className = 'run-code-button';
-        runButton.onclick = () => runCode(block, index);
+        
+        const inputContainer = document.createElement('div');
+        inputContainer.className = 'code-input-container';
+        
+        const inputLabel = document.createElement('label');
+        inputLabel.innerText = 'Input (stdin):';
+        
+        const inputArea = document.createElement('textarea');
+        inputArea.className = 'code-input-area';
+        inputArea.rows = 2;
+        
+        inputContainer.appendChild(inputLabel);
+        inputContainer.appendChild(inputArea);
+
+        runButton.onclick = () => runCode(block, index, inputArea.value);
 
         block.prepend(runButton);
+        block.prepend(inputContainer);
 
         const outputContainer = document.createElement('div');
         outputContainer.className = 'code-output-container';
@@ -502,7 +517,7 @@ function addRunCodeButtons() {
     });
 }
 
-async function runCode(block, index) {
+async function runCode(block, index, stdin) {
     const code = block.querySelector('code').innerText;
     const language = guessLanguageFromCode(code);
     
@@ -510,9 +525,18 @@ async function runCode(block, index) {
     outputContainer.innerHTML = '<div class="loader"></div>';
 
     try {
-        let files = (language === 'html') ? extractWebFiles(code) : [{ name: "index.js", content: code }];
+        const extension = {
+            "python": ".py",
+            "javascript": ".js",
+            "java": ".java",
+            "c": ".c",
+            "cpp": ".cpp",
+            "csharp": ".cs",
+            "html": ".html"
+        }[language] || '.txt';
+        let files = (language === 'html') ? extractWebFiles(code) : [{ name: `main${extension}`, content: code }];
 
-        const payload = { language: language, stdin: "", files: files };
+        const payload = { language: language, stdin: stdin, files: files };
 
         const response = await fetch('/api/run-code', {
             method: 'POST',
@@ -640,12 +664,26 @@ function guessLanguageFromCode(code) {
 function getDownloadContent() {
     let allPracticalsHtml = '';
     conversationHistory.forEach((practical, index) => {
+        const practicalContainer = document.getElementById(`practical-${index}`);
+        const solutionContainer = practicalContainer.querySelector('.solution-text-container');
+        
+        const clone = solutionContainer.cloneNode(true);
+        clone.querySelectorAll('.run-code-button, .capture-output-button, .copy-button, .read-aloud-button').forEach(btn => btn.remove());
+
+        // The user wants "OUTPUT" heading
+        const outputContainers = clone.querySelectorAll('.code-output-container');
+        outputContainers.forEach(outputContainer => {
+            const outputHeading = document.createElement('p');
+            outputHeading.innerHTML = '<br><b style="font-size: 16px;">OUTPUT</b>';
+            outputContainer.before(outputHeading);
+        });
+
         allPracticalsHtml += `
             <div class="${index > 0 ? 'html2pdf__page-break' : ''}">
                 <p style="font-size: 16pt;">
                     <b>Practical No: ${practical.practicalNo}</b> - <span style="font-weight: normal; font-size: 12pt;">${practical.question}</span>
                 </p>
-                ${marked.parse(practical.solution)}
+                ${clone.innerHTML}
             </div>
         `;
     });
@@ -670,6 +708,17 @@ function getDownloadContent() {
                 pre, code {
                     font-family: 'Times New Roman', Times, serif;
                     overflow-x: auto;
+                }
+                .code-output-container {
+                    background-color: #f0f0f0;
+                    border: 1px solid #ccc;
+                    padding: 10px;
+                    margin-top: 10px;
+                    white-space: pre-wrap;
+                }
+                .image-preview-container img {
+                    max-width: 100%;
+                    border: 1px solid #ccc;
                 }
             </style>
         </head>
