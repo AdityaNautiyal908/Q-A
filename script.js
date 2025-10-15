@@ -482,37 +482,38 @@ document.getElementById('import-file').addEventListener('change', (event) => {
 function addRunCodeButtons() {
     const codeBlocks = document.querySelectorAll('.solution-text-container pre');
     codeBlocks.forEach((block, index) => {
-        if (block.querySelector('.run-code-button')) return;
-        const runButton = document.createElement('button');
-        runButton.innerText = 'Run Code';
-        runButton.className = 'run-code-button';
-        
+        if (block.nextElementSibling && block.nextElementSibling.classList.contains('code-input-container')) return;
+
         const inputContainer = document.createElement('div');
         inputContainer.className = 'code-input-container';
         
         const inputLabel = document.createElement('label');
-        inputLabel.innerText = 'Input (stdin):';
+        inputLabel.innerText = 'Program Input:';
         
         const inputArea = document.createElement('textarea');
         inputArea.className = 'code-input-area';
         inputArea.rows = 2;
+        inputArea.placeholder = 'Enter any required input for the code here, with each value on a new line.';
         
         inputContainer.appendChild(inputLabel);
         inputContainer.appendChild(inputArea);
 
+        const runButton = document.createElement('button');
+        runButton.innerText = 'Run Code';
+        runButton.className = 'run-code-button';
         runButton.onclick = () => runCode(block, index, inputArea.value);
-
-        block.prepend(runButton);
-        block.prepend(inputContainer);
 
         const outputContainer = document.createElement('div');
         outputContainer.className = 'code-output-container';
         outputContainer.id = `code-output-${index}`;
-        block.after(outputContainer);
 
         const imagePreviewContainer = document.createElement('div');
         imagePreviewContainer.className = 'image-preview-container';
         imagePreviewContainer.id = `image-preview-container-${index}`;
+
+        block.after(inputContainer);
+        inputContainer.after(runButton);
+        runButton.after(outputContainer);
         outputContainer.after(imagePreviewContainer);
     });
 }
@@ -572,11 +573,16 @@ async function runCode(block, index, stdin) {
 }
 
 function addCaptureButton(outputContainer, url, index) {
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.marginBottom = '10px';
+
     const captureButton = document.createElement('button');
     captureButton.innerText = 'Generate Output Image';
     captureButton.className = 'capture-output-button';
     captureButton.onclick = () => captureOutput(outputContainer, url, index);
-    outputContainer.prepend(captureButton);
+    
+    buttonContainer.appendChild(captureButton);
+    outputContainer.prepend(buttonContainer);
 }
 
 async function captureOutput(outputContainer, url, index) {
