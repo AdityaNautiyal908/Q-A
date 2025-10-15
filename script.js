@@ -28,6 +28,10 @@ window.addEventListener('load', () => {
 
     mermaid.initialize({ startOnLoad: false });
     loadSession();
+
+    if (!localStorage.getItem('hasVisited')) {
+        startTour();
+    }
 });
 
 const themeToggle = document.getElementById('theme-toggle');
@@ -568,3 +572,156 @@ const modal = document.getElementById('edit-modal');
 const closeButton = document.querySelector('.close-button');
 closeButton.onclick = () => { modal.style.display = 'none'; };
 window.onclick = (event) => { if (event.target == modal) { modal.style.display = 'none'; } };
+
+function startTour() {
+    const tour = new Shepherd.Tour({
+        useModalOverlay: true,
+        defaultStepOptions: {
+            classes: 'shepherd-theme-dark',
+            scrollTo: true
+        }
+    });
+
+    tour.addStep({
+        title: 'Welcome to Ace Q&A!',
+        text: 'This is a quick tour to get you started. You can skip this at any time.',
+        attachTo: {
+            element: '.container',
+            on: 'top'
+        },
+        buttons: [
+            {
+                action() {
+                    return this.next();
+                },
+                text: 'Next'
+            }
+        ]
+    });
+
+    tour.addStep({
+        title: 'Enter Your Questions',
+        text: 'You can type or paste your questions here. You can ask multiple questions at once by separating them with a new line.',
+        attachTo: {
+            element: '#question-input',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                action() {
+                    return this.back();
+                },
+                classes: 'shepherd-button-secondary',
+                text: 'Back'
+            },
+            {
+                action() {
+                    return this.next();
+                },
+                text: 'Next'
+            }
+        ]
+    });
+
+    tour.addStep({
+        title: 'Get Your Solution',
+        text: 'Click this button to get the solution to your questions.',
+        attachTo: {
+            element: '#solve-button',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                action() {
+                    return this.back();
+                },
+                classes: 'shepherd-button-secondary',
+                text: 'Back'
+            },
+            {
+                action() {
+                    return this.next();
+                },
+                text: 'Next'
+            }
+        ]
+    });
+
+    tour.addStep({
+        title: 'View Your Solution',
+        text: 'Your solutions will appear here. You can edit or delete them as needed.',
+        attachTo: {
+            element: '#solution-output',
+            on: 'top'
+        },
+        buttons: [
+            {
+                action() {
+                    return this.back();
+                },
+                classes: 'shepherd-button-secondary',
+                text: 'Back'
+            },
+            {
+                action() {
+                    return this.next();
+                },
+                text: 'Next'
+            }
+        ]
+    });
+
+    tour.addStep({
+        title: 'Manage Your Session',
+        text: 'You can download your solutions, clear the session, or export/import your session history.',
+        attachTo: {
+            element: '.actions',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                action() {
+                    return this.back();
+                },
+                classes: 'shepherd-button-secondary',
+                text: 'Back'
+            },
+            {
+                action() {
+                    return this.next();
+                },
+                text: 'Next'
+            }
+        ]
+    });
+
+    tour.addStep({
+        title: 'Toggle Theme',
+        text: 'Switch between light and dark mode for your comfort.',
+        attachTo: {
+            element: '#theme-toggle',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                action() {
+                    return this.back();
+                },
+                classes: 'shepherd-button-secondary',
+                text: 'Back'
+            },
+            {
+                action() {
+                    return this.next();
+                },
+                text: 'Finish'
+            }
+        ]
+    });
+
+    tour.on('complete', () => {
+        localStorage.setItem('hasVisited', 'true');
+    });
+
+    tour.start();
+}
