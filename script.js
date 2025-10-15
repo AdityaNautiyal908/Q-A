@@ -23,15 +23,14 @@ window.addEventListener('load', () => {
         duration: 0.5,
         onComplete: () => {
             splashScreen.style.display = 'none';
+            if (!localStorage.getItem('hasVisited')) {
+                startTour();
+            }
         }
     });
 
     mermaid.initialize({ startOnLoad: false });
     loadSession();
-
-    if (!localStorage.getItem('hasVisited')) {
-        startTour();
-    }
 });
 
 const themeToggle = document.getElementById('theme-toggle');
@@ -577,7 +576,7 @@ function startTour() {
     const tour = new Shepherd.Tour({
         useModalOverlay: true,
         defaultStepOptions: {
-            classes: 'shepherd-theme-dark',
+            classes: 'shepherd-has-cancel-icon shepherd-has-title',
             scrollTo: true
         }
     });
@@ -595,6 +594,12 @@ function startTour() {
                     return this.next();
                 },
                 text: 'Next'
+            },
+            {
+                action() {
+                    return this.complete();
+                },
+                text: 'Finish'
             }
         ]
     });
