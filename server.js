@@ -2,7 +2,8 @@ const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const cors = require('cors');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 require('dotenv').config();
 
 const app = express();
@@ -92,32 +93,33 @@ app.post('/api/capture-screenshot', async (req, res) => {
 
     let browser;
     console.log(`[CAPTURE] Attempting screenshot for URL: ${url}`);
-
+    
     try {
         // Launch a headless Chromium browser instance
         browser = await puppeteer.launch({
-             headless: 'new',
-             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-             timeout: 60000
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
         });
-        console.log('[CAPTURE] Browser launched successfully.');
+        console.log('[CAPTURE] Browser launched successfully.'); 
 
         const page = await browser.newPage();
-        await page.setViewport({ width: 1200, height: 800 });
-
+        await page.setViewport({ width: 1200, height: 800 }); 
+        
         // Navigate to the OneCompiler-provided URL
-        await page.goto(url, {
+        await page.goto(url, { 
             waitUntil: 'networkidle0', // Wait until the page is fully idle
-            timeout: 90000
+            timeout: 90000 
         });
-        console.log('[CAPTURE] Page navigated successfully.');
+        console.log('[CAPTURE] Page navigated successfully.'); 
 
         // Take a screenshot of the entire rendered page
         const screenshotBuffer = await page.screenshot({
-            fullPage: true,
+            fullPage: true, 
             type: 'png'
         });
-        console.log('[CAPTURE] Screenshot captured.');
+        console.log('[CAPTURE] Screenshot captured.'); 
 
         // Convert the image data to Base64 for transfer back to the client
         const base64Image = screenshotBuffer.toString('base64');
