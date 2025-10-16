@@ -486,22 +486,36 @@ function addRunCodeButtons() {
 
         const inputContainer = document.createElement('div');
         inputContainer.className = 'code-input-container';
+
+        const inputHeader = document.createElement('div');
+        inputHeader.className = 'code-input-header';
         
         const inputLabel = document.createElement('label');
         inputLabel.innerText = 'Program Input:';
+
+        const deleteButton = document.createElement('button');
+        deleteButton.innerText = 'Delete';
+        deleteButton.className = 'delete-input-button';
+
+        inputHeader.appendChild(inputLabel);
+        inputHeader.appendChild(deleteButton);
         
         const inputArea = document.createElement('textarea');
         inputArea.className = 'code-input-area';
         inputArea.rows = 2;
         inputArea.placeholder = 'Enter any required input for the code here, with each value on a new line.';
+
+        deleteButton.addEventListener('click', () => {
+            inputArea.value = '';
+        });
         
-        inputContainer.appendChild(inputLabel);
+        inputContainer.appendChild(inputHeader);
         inputContainer.appendChild(inputArea);
 
         const runButton = document.createElement('button');
         runButton.innerText = 'Run Code';
         runButton.className = 'run-code-button';
-        runButton.onclick = () => runCode(block, index, inputArea.value);
+        runButton.onclick = (event) => runCode(block, index, inputArea.value, event.target); // Pass the button
 
         const outputContainer = document.createElement('div');
         outputContainer.className = 'code-output-container';
@@ -518,7 +532,7 @@ function addRunCodeButtons() {
     });
 }
 
-async function runCode(block, index, stdin) {
+async function runCode(block, index, stdin, runButtonElement) { // Added runButtonElement
     const code = block.querySelector('code').innerText;
     const language = guessLanguageFromCode(code);
     
@@ -555,7 +569,7 @@ async function runCode(block, index, stdin) {
             const outputUrl = result.stdout;
             if (outputUrl) {
                 outputContainer.innerHTML = `<iframe src="${outputUrl}" style="width: 100%; height: 300px; border: none;"></iframe>`;
-                addCaptureButton(outputContainer, outputUrl, index);
+                addCaptureButton(outputContainer, outputUrl, index, runButtonElement); // Pass element
             } else {
                  outputContainer.innerHTML = `<p style="color: red;">ERROR: Failed to render HTML. Check if it's valid: ${result.stderr || result.exception}</p>`;
             }
@@ -563,7 +577,7 @@ async function runCode(block, index, stdin) {
             outputContainer.textContent = `ERROR:\n${result.stderr || result.exception}`;
         } else {
             outputContainer.textContent = result.stdout;
-            addCaptureButton(outputContainer, null, index);
+            addCaptureButton(outputContainer, null, index, runButtonElement); // Pass element
         }
 
     } catch (error) {
@@ -572,17 +586,20 @@ async function runCode(block, index, stdin) {
     }
 }
 
-function addCaptureButton(outputContainer, url, index) {
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.marginBottom = '10px';
+function addCaptureButton(outputContainer, url, index, runButtonElement) { // Added runButtonElement
+    // Check if the button already exists for this code block
+    if (document.getElementById(`capture-btn-${index}`)) {
+        return;
+    }
 
     const captureButton = document.createElement('button');
     captureButton.innerText = 'Generate Output Image';
     captureButton.className = 'capture-output-button';
+    captureButton.id = `capture-btn-${index}`; // Add ID to prevent duplicates
     captureButton.onclick = () => captureOutput(outputContainer, url, index);
     
-    buttonContainer.appendChild(captureButton);
-    outputContainer.prepend(buttonContainer);
+    // Insert the capture button next to the run button
+    runButtonElement.after(captureButton);
 }
 
 async function captureOutput(outputContainer, url, index) {
@@ -674,9 +691,11 @@ function getDownloadContent() {
         const solutionContainer = practicalContainer.querySelector('.solution-text-container');
         
         const clone = solutionContainer.cloneNode(true);
-        clone.querySelectorAll('.run-code-button, .capture-output-button, .copy-button, .read-aloud-button').forEach(btn => btn.remove());
 
-        // The user wants "OUTPUT" heading
+        // Remove all interactive buttons and input areas from the clone
+        clone.querySelectorAll('.run-code-button, .capture-output-button, .copy-button, .read-aloud-button, .code-input-container, .delete-input-button').forEach(el => el.remove());
+
+        // The user wants "OUTPUT" heading, let's add it
         const outputContainers = clone.querySelectorAll('.code-output-container');
         outputContainers.forEach(outputContainer => {
             const outputHeading = document.createElement('p');
@@ -684,12 +703,25 @@ function getDownloadContent() {
             outputContainer.before(outputHeading);
         });
 
+        // Find the generated image in the *original* container to get the correct src
+        const imagePreview = practicalContainer.querySelector(`#image-preview-container-${index} img`);
+        
+        // Remove the preview container from the clone so we can manually add the image later
+        clone.querySelectorAll('.image-preview-container').forEach(el => el.remove());
+
+        let imageHtml = '';
+        if (imagePreview && imagePreview.src) {
+            // Add a heading for the generated image
+            imageHtml = `<br><p><b style="font-size: 16px;">Generated Image:</b></p><img src="${imagePreview.src}" style="max-width: 100%; border: 1px solid #ccc; margin-top: 10px;">`;
+        }
+
         allPracticalsHtml += `
             <div class="${index > 0 ? 'html2pdf__page-break' : ''}">
                 <p style="font-size: 16pt;">
                     <b>Practical No: ${practical.practicalNo}</b> - <span style="font-weight: normal; font-size: 12pt;">${practical.question}</span>
                 </p>
                 ${clone.innerHTML}
+                ${imageHtml}
             </div>
         `;
     });
@@ -714,6 +746,8 @@ function getDownloadContent() {
                 pre, code {
                     font-family: 'Times New Roman', Times, serif;
                     overflow-x: auto;
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
                 }
                 .code-output-container {
                     background-color: #f0f0f0;
@@ -721,6 +755,7 @@ function getDownloadContent() {
                     padding: 10px;
                     margin-top: 10px;
                     white-space: pre-wrap;
+                    word-wrap: break-word;
                 }
                 .image-preview-container img {
                     max-width: 100%;

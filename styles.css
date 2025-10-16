@@ -840,3 +840,23 @@ body.light-mode .read-aloud-button {
     color: var(--text-color);
     resize: vertical;
 }
+
+.code-input-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.delete-input-button {
+    background-color: var(--error-color);
+    color: white;
+    padding: 3px 8px;
+    font-size: 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.delete-input-button:hover {
+    background-color: #e03939;
+}
