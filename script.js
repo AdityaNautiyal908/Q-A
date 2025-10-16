@@ -712,7 +712,7 @@ function getDownloadContent() {
         let imageHtml = '';
         if (imagePreview && imagePreview.src) {
             // Add a heading for the generated image
-            imageHtml = `<br><p><b style="font-size: 16px;">Generated Image:</b></p><img src="${imagePreview.src}" style="max-width: 100%; border: 1px solid #ccc; margin-top: 10px;">`;
+            imageHtml = `<br><img src="${imagePreview.src}" style="max-width: 100%; border: 1px solid #ccc; margin-top: 10px;">`;
         }
 
         allPracticalsHtml += `
