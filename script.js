@@ -692,28 +692,29 @@ function getDownloadContent() {
         
         const clone = solutionContainer.cloneNode(true);
 
-        // Remove all interactive buttons and input areas from the clone
+        // Remove all interactive buttons and input areas
         clone.querySelectorAll('.run-code-button, .capture-output-button, .copy-button, .read-aloud-button, .code-input-container, .delete-input-button').forEach(el => el.remove());
 
-        // The user wants "OUTPUT" heading, let's add it
-        const outputContainers = clone.querySelectorAll('.code-output-container');
-        outputContainers.forEach(outputContainer => {
-            const outputHeading = document.createElement('p');
-            outputHeading.innerHTML = '<br><b style="font-size: 16px;">OUTPUT</b>';
-            outputContainer.before(outputHeading);
-        });
-
-        // Find the generated image in the *original* container to get the correct src
+        // Find the generated image in the original container
         const imagePreview = practicalContainer.querySelector(`#image-preview-container-${index} img`);
         
-        // Remove the preview container from the clone so we can manually add the image later
-        clone.querySelectorAll('.image-preview-container').forEach(el => el.remove());
-
         let imageHtml = '';
         if (imagePreview && imagePreview.src) {
-            // Add a heading for the generated image
+            // If an image exists, use it and remove the text-based output container from the clone
             imageHtml = `<br><img src="${imagePreview.src}" style="max-width: 100%; border: 1px solid #ccc; margin-top: 10px;">`;
+            clone.querySelectorAll('.code-output-container').forEach(el => el.remove());
+        } else {
+            // If no image, add the "OUTPUT" heading to the existing text-based output
+            const outputContainers = clone.querySelectorAll('.code-output-container');
+            outputContainers.forEach(outputContainer => {
+                const outputHeading = document.createElement('p');
+                outputHeading.innerHTML = '<br><b style="font-size: 16px;">OUTPUT</b>';
+                outputContainer.before(outputHeading);
+            });
         }
+
+        // Always remove the preview container from the clone (it's either empty or we're replacing it)
+        clone.querySelectorAll('.image-preview-container').forEach(el => el.remove());
 
         allPracticalsHtml += `
             <div class="${index > 0 ? 'html2pdf__page-break' : ''}">
