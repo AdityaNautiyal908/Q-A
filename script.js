@@ -656,19 +656,40 @@ function extractWebFiles(fullCode) {
     const cssContent = extractTagContent('style', fullCode);
     const jsContent = extractTagContent('script', fullCode);
 
-    let htmlContent = fullCode
-        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/ig, '')
-        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/ig, '')
-        .trim();
+    let htmlContent = fullCode;
 
-    if (htmlContent) { files.push({ name: "index.html", content: htmlContent }); }
-    if (cssContent) { files.push({ name: "styles.css", content: cssContent }); }
-    if (jsContent) { files.push({ name: "script.js", content: jsContent }); }
-    
-    if (files.length === 0 && fullCode.trim().length > 0) {
-         files.push({ name: "index.html", content: fullCode });
+    // Replace style tags with a link to styles.css
+    if (cssContent) {
+        htmlContent = htmlContent.replace(/<style\b[^>]*>[\s\S]*?<\/style>/ig, '<link rel="stylesheet" href="styles.css">');
+        files.push({ name: "styles.css", content: cssContent });
+    }
+
+    // Replace script tags with a link to script.js
+    if (jsContent) {
+        htmlContent = htmlContent.replace(/<script\b[^>]*>[\s\S]*?<\/script>/ig, '<script src="script.js"></script>');
+        files.push({ name: "script.js", content: jsContent });
+    }
+
+    // Ensure there's a head tag for the CSS link if it was added
+    if (cssContent && !htmlContent.includes('<head>')) {
+        htmlContent = `<head>\n</head>\n${htmlContent}`;
     }
     
+    // If a CSS link was added and there's a head tag, ensure it's inside the head
+    if (cssContent && htmlContent.includes('<link rel="stylesheet" href="styles.css">') && htmlContent.includes('</head>')) {
+         htmlContent = htmlContent.replace('</head>', '<link rel="stylesheet" href="styles.css">\n</head>');
+    }
+
+
+    if (htmlContent) {
+        files.push({ name: "index.html", content: htmlContent });
+    }
+    
+    // Fallback for code that is pure HTML (no style or script tags)
+    if (files.length === 0 && fullCode.trim().length > 0) {
+        files.push({ name: "index.html", content: fullCode });
+    }
+
     return files;
 }
 
