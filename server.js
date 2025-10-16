@@ -2,8 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const cors = require('cors');
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer');
 require('dotenv').config();
 
 const app = express();
@@ -88,7 +87,10 @@ app.post('/api/run-code', async (req, res) => {
 // 2. SCREENSHOT ENDPOINT (Handles HTML/Web Page Capture using Puppeteer)
 // ----------------------------------------------------------------------
 app.post('/api/capture-screenshot', async (req, res) => {
+    console.log('[CAPTURE] Received request for screenshot.');
+    console.log('[CAPTURE] Request body:', req.body);
     const { url } = req.body;
+    console.log('[CAPTURE] Extracted URL:', url);
     if (!url) { return res.status(400).json({ error: 'Missing URL parameter.' }); }
 
     let browser;
@@ -97,10 +99,8 @@ app.post('/api/capture-screenshot', async (req, res) => {
     try {
         // Launch a headless Chromium browser instance
         browser = await puppeteer.launch({
-            args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
+            headless: true, // Use new headless mode
+            args: ['--no-sandbox', '--disable-setuid-sandbox'], // Recommended args for Puppeteer
         });
         console.log('[CAPTURE] Browser launched successfully.'); 
 

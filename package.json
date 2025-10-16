@@ -16,10 +16,9 @@
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "nodemon": "^3.1.10",
-    "puppeteer-core": "^22.1.0",
-    "@sparticuz/chromium": "^123.0.1"
+    "puppeteer-core": "^22.1.0"
   },
   "devDependencies": {
-    "puppeteer": "^22.1.0"
+    "puppeteer": "^22.15.0"
   }
 }

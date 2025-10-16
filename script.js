@@ -566,6 +566,7 @@ async function runCode(block, index, stdin, runButtonElement) { // Added runButt
         const result = await response.json();
         
         if (language === 'html') {
+            console.log("OneCompiler API Result for HTML:", result); // Log the full result object
             const outputUrl = result.stdout;
             if (outputUrl) {
                 outputContainer.innerHTML = `<iframe src="${outputUrl}" style="width: 100%; height: 300px; border: none;"></iframe>`;
