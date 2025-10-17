@@ -2,7 +2,8 @@ const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const cors = require('cors');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 require('dotenv').config();
 
 const app = express();
@@ -99,8 +100,10 @@ app.post('/api/capture-screenshot', async (req, res) => {
     try {
         // Launch a headless Chromium browser instance
         browser = await puppeteer.launch({
-            headless: true, // Use new headless mode
-            args: ['--no-sandbox', '--disable-setuid-sandbox'], // Recommended args for Puppeteer
+            args: chromium.args,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
+            ignoreHTTPSErrors: true,
         });
         console.log('[CAPTURE] Browser launched successfully.'); 
 
