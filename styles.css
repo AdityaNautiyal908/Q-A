@@ -28,6 +28,7 @@ body {
     margin: 0;
     padding: 0;
     line-height: 1.6;
+    box-sizing: border-box;
 }
 
 #splash-screen {
@@ -700,9 +701,28 @@ hr {
 }
 
 @media (max-width: 768px) {
+    .navbar {
+        padding: 15px 20px;
+    }
+
+    .container {
+        width: 100%;
+        margin: 20px auto;
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 1.8em;
+    }
+
+    p.subtitle {
+        font-size: 0.9em;
+    }
+
     .actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
+        gap: 10px;
     }
 
     .modal-content {

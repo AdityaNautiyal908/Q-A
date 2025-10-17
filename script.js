@@ -26,6 +26,11 @@ window.addEventListener('load', () => {
             if (!localStorage.getItem('hasVisited')) {
                 startTour();
             }
+            // Populate speechVoices immediately if available
+            if (speechSynthesis.getVoices().length > 0) {
+                speechVoices = speechSynthesis.getVoices();
+                console.log('Speech voices populated on load.', speechVoices);
+            }
         }
     });
 
@@ -99,6 +104,78 @@ if (SpeechRecognition) {
 let conversationHistory = [];
 let practicalCount = 0;
 let activeReadAloudButton = null;
+let speechVoices = [];
+
+speechSynthesis.onvoiceschanged = () => {
+    speechVoices = speechSynthesis.getVoices();
+    console.log('Available Speech Synthesis Voices:', speechVoices);
+};
+
+function readAloud(index, buttonElement) {
+    const wasActive = (activeReadAloudButton === buttonElement);
+
+    speechSynthesis.cancel();
+    if (activeReadAloudButton) {
+        activeReadAloudButton.innerText = 'Read Aloud';
+    }
+    activeReadAloudButton = null;
+
+    if (!wasActive) {
+        const speakText = () => {
+            const text = conversationHistory[index].solution;
+            const utterance = new SpeechSynthesisUtterance(text);
+
+            const selectedVoice = speechVoices.find(voice => voice.name === 'Google UK English Male') || speechVoices.find(voice => voice.name === 'Google UK English Female') || speechVoices[0];
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+                console.log('Selected Voice:', selectedVoice.name);
+            } else {
+                console.warn('No suitable voice found, using default.');
+            }
+
+            utterance.onend = () => {
+                if (activeReadAloudButton === buttonElement) {
+                    buttonElement.innerText = 'Read Aloud';
+                    activeReadAloudButton = null;
+                }
+            };
+
+            utterance.onerror = (event) => {
+                console.error('Speech synthesis error:', event.error);
+                const currentTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Speech Error',
+                    text: 'Could not play speech. Please try again or check your browser settings.',
+                    customClass: {
+                        popup: currentTheme === 'dark' ? 'swal2-dark' : 'swal2-light'
+                    },
+                    background: currentTheme === 'dark' ? '#1e1e1e' : '#ffffff',
+                    color: currentTheme === 'dark' ? '#e0e0e0' : '#333333'
+                });
+                if (activeReadAloudButton === buttonElement) {
+                    buttonElement.innerText = 'Read Aloud';
+                    activeReadAloudButton = null;
+                }
+            };
+
+            speechSynthesis.speak(utterance);
+            buttonElement.innerText = 'Stop';
+            activeReadAloudButton = buttonElement;
+        };
+
+        if (speechVoices.length === 0) {
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                speechVoices = speechSynthesis.getVoices();
+                if (speechVoices.length > 0) {
+                    speakText();
+                }
+            }, { once: true });
+        } else {
+            speakText();
+        }
+    }
+}
 
 function addCopyButtons() {
     const codeBlocks = document.querySelectorAll('.solution-text-container pre');
@@ -119,44 +196,6 @@ function addCopyButtons() {
         });
 
         block.prepend(button);
-    });
-}
-
-function addReadAloudButtons() {
-    const solutionContainers = document.querySelectorAll('.solution-text-container');
-    solutionContainers.forEach((container, index) => {
-        if (container.querySelector('.read-aloud-button')) return;
-        const button = document.createElement('button');
-        button.innerText = 'Read Aloud';
-        button.className = 'read-aloud-button';
-
-        button.addEventListener('click', () => {
-            const wasActive = (activeReadAloudButton === button);
-
-            speechSynthesis.cancel();
-            if (activeReadAloudButton) {
-                activeReadAloudButton.innerText = 'Read Aloud';
-            }
-            activeReadAloudButton = null;
-
-            if (!wasActive) {
-                const text = conversationHistory[index].solution;
-                const utterance = new SpeechSynthesisUtterance(text);
-
-                utterance.onend = () => {
-                    if (activeReadAloudButton === button) {
-                        button.innerText = 'Read Aloud';
-                        activeReadAloudButton = null;
-                    }
-                };
-
-                speechSynthesis.speak(utterance);
-                button.innerText = 'Stop';
-                activeReadAloudButton = button;
-            }
-        });
-
-        container.prepend(button);
     });
 }
 
@@ -197,14 +236,19 @@ function renderHistory() {
         const htmlSolution = marked.parse(practical.solution);
         const editButton = `<button class="edit-button" onclick="openEditModal(${index})">Edit</button>`;
         const deleteButton = `<button class="delete-button" onclick="deletePractical(${index})">Delete</button>`;
-        const readAloudButton = `<button class="read-aloud-button" onclick="readAloud(${index})">Read Aloud</button>`;
+        const readAloudButtonHtml = `<button class="read-aloud-button">Read Aloud</button>`;
         const editSolutionButton = `<button class="edit-button" onclick="openEditSolutionModal(${index})">Edit Solution</button>`;
-        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}${readAloudButton}${editSolutionButton}</h2><p>${practical.question}</p><div class="solution-text-container markdown-body">${htmlSolution}</div>`;
+        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}${readAloudButtonHtml}${editSolutionButton}</h2><p>${practical.question}</p><div class="solution-text-container markdown-body">${htmlSolution}</div>`;
         outputElement.appendChild(practicalContainer);
+
+        // Attach event listener for the read aloud button
+        const currentReadAloudButton = practicalContainer.querySelector('.read-aloud-button');
+        if (currentReadAloudButton) {
+            currentReadAloudButton.addEventListener('click', () => readAloud(index, currentReadAloudButton));
+        }
     });
     hljs.highlightAll();
     addCopyButtons();
-    addReadAloudButtons();
     addRunCodeButtons();
     renderMermaidDiagrams();
     if (conversationHistory.length > 0) {
@@ -301,7 +345,6 @@ async function rerunQuestion(index, newQuestion) {
         saveSession();
         hljs.highlightAll();
         addCopyButtons();
-        addReadAloudButtons();
         addRunCodeButtons();
         renderMermaidDiagrams();
 
@@ -375,7 +418,6 @@ document.getElementById('solve-button').addEventListener('click', async () => {
 
             hljs.highlightAll();
             addCopyButtons();
-            addReadAloudButtons();
             addRunCodeButtons();
             renderMermaidDiagrams();
 
