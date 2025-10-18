@@ -26,6 +26,67 @@ window.addEventListener('load', () => {
             if (!localStorage.getItem('hasVisited')) {
                 startTour();
             }
+
+// Capture within iframe and send image back into the app (no download)
+async function captureIframeAndSend(){
+    try{
+        const overlay=document.getElementById('ai-preview-overlay');
+        const iframe=overlay.querySelector('#ai-preview-iframe');
+        const w=iframe.contentWindow; const d=w.document;
+        const ensure = () => new Promise((res)=>{ if(w.html2canvas){res();return;} const s=d.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; s.onload=()=>res(); d.head.appendChild(s); });
+        await ensure();
+        const btn=d.getElementById('ai-generate-image'); const old=btn?btn.style.display:null; if(btn) btn.style.display='none';
+        const canvas=await w.html2canvas(d.body,{useCORS:true,allowTaint:true,scale:2,logging:false,backgroundColor:null});
+        if(btn) btn.style.display=old||'';
+        const url=canvas.toDataURL('image/png');
+        insertImageIntoLatestSolution(url);
+        Swal.fire({toast:true,position:'top-end',timer:1500,showConfirmButton:false,icon:'success',title:'Image added to latest solution'});
+    }catch(e){
+        console.error('Send to app failed',e);
+        Swal.fire({icon:'error',title:'Failed',text:e.message||'Could not send image to app.'});
+    }
+}
+
+// Listen for image from preview tab (postMessage)
+window.addEventListener('message', (evt) => {
+    try{
+        const data = evt.data || {};
+        if (data.type === 'ABSOL_PREVIEW_IMAGE' && data.dataUrl) {
+            insertImageIntoLatestSolution(data.dataUrl);
+            Swal.fire({toast:true,position:'top-end',timer:1500,showConfirmButton:false,icon:'success',title:'Image received and added'});
+        }
+    }catch(_){}
+});
+
+// Append the image under the latest solution so exports include it
+function insertImageIntoLatestSolution(dataUrl){
+    try{
+        if (conversationHistory.length === 0) return;
+        const latestIndex = conversationHistory.length - 1;
+        const container = document.getElementById(`practical-${latestIndex}`);
+        if (!container) return;
+        let shotWrap = container.querySelector('.generated-preview-wrap');
+        if (!shotWrap) {
+            shotWrap = document.createElement('div');
+            shotWrap.className = 'generated-preview-wrap';
+            shotWrap.style.margin = '12px 0';
+            const title = document.createElement('div');
+            title.textContent = 'Generated Output Image';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '6px';
+            shotWrap.appendChild(title);
+            container.appendChild(shotWrap);
+        }
+        const img = document.createElement('img');
+        img.src = dataUrl; img.alt = 'Preview';
+        img.style.maxWidth = '100%'; img.style.borderRadius = '8px'; img.style.border = '1px solid #2a2f3a';
+        shotWrap.innerHTML = shotWrap.firstChild ? shotWrap.firstChild.outerHTML : '';
+        shotWrap.appendChild(img);
+        // Persist image reference in history for future use
+        conversationHistory[latestIndex].previewImage = dataUrl;
+        saveSession();
+    }catch(e){ console.error('Insert image failed', e); }
+}
             // Populate speechVoices immediately if available
             if (speechSynthesis.getVoices().length > 0) {
                 speechVoices = speechSynthesis.getVoices();
@@ -227,6 +288,192 @@ function loadSession() {
     }
 }
 
+// Build a single runnable HTML document from markdown that may contain multiple code blocks
+function buildIntegratedHTMLFromSolution(markdown) {
+    const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+    let match;
+    let htmlBlocks = [];
+    let cssBlocks = [];
+    let jsBlocks = [];
+
+    while ((match = codeBlockRegex.exec(markdown)) !== null) {
+        const lang = (match[1] || '').toLowerCase().trim();
+        const content = match[2] || '';
+        if (lang.includes('html')) htmlBlocks.push(content);
+        else if (lang.includes('css')) cssBlocks.push(content);
+        else if (lang.includes('js') || lang.includes('javascript') || lang.includes('ts')) jsBlocks.push(content);
+    }
+
+    const css = cssBlocks.join('\n\n');
+    const js = jsBlocks.join('\n\n');
+    let base = htmlBlocks[0] || '';
+
+    if (!base) {
+        // No explicit HTML provided; create a wrapper
+        base = `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1"/>\n<title>Preview</title>\n</head>\n<body>\n<div id="app"></div>\n</body>\n</html>`;
+    }
+
+    // Inject CSS into <head>
+    if (css.trim().length > 0) {
+        if (base.match(/<head[^>]*>/i)) {
+            base = base.replace(/<head[^>]*>/i, (m) => `${m}\n<style id="ai-injected-styles">\n${css}\n</style>`);
+        } else {
+            base = base.replace(/<html[^>]*>/i, (m) => `${m}\n<head>\n<style id="ai-injected-styles">\n${css}\n</style>\n</head>`);
+        }
+    }
+
+    // Inject JS before </body>
+    if (js.trim().length > 0) {
+        if (base.match(/<\/body>/i)) {
+            base = base.replace(/<\/body>/i, `<script id="ai-injected-script">\n${js}\n<\/script>\n</body>`);
+        } else {
+            base += `\n<script id="ai-injected-script">\n${js}\n<\/script>`;
+        }
+    }
+
+    // Inject helper style and Generate Image button using html2canvas in the preview document
+    const helperStyle = `\n<style id="ai-preview-toolbar-style">\n.ai-shot-btn{position:fixed;right:16px;bottom:16px;z-index:99999;background:#0ea5e9;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Noto Sans','Helvetica Neue',Arial,'Apple Color Emoji','Segoe UI Emoji';box-shadow:0 6px 16px rgba(14,165,233,.5);cursor:pointer} .ai-shot-btn:active{transform:translateY(1px)}\n</style>`;
+    if (base.match(/<head[^>]*>/i)) {
+        base = base.replace(/<head[^>]*>/i, (m) => `${m}\n${helperStyle}`);
+    } else {
+        base = base.replace(/<html[^>]*>/i, (m) => `${m}\n<head>\n${helperStyle}\n</head>`);
+    }
+
+    const helperScript = `\n<script id="ai-preview-toolbar-script">\n(function(){\n  function injectBtn(){\n    if(document.getElementById('ai-generate-image')) return;\n    var b=document.createElement('button');\n    b.id='ai-generate-image';\n    b.className='ai-shot-btn';\n    b.textContent='Generate Image';\n    b.onclick=async function(){\n      try{\n        if(typeof html2canvas==='undefined'){\n          var s=document.createElement('script');\n          s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';\n          s.onload=doShot;\n          document.head.appendChild(s);\n        } else { doShot(); }\n      }catch(e){ console.error('Shot error',e); alert('Failed to capture image'); }\n    };\n    document.body.appendChild(b);\n  }\n  async function doShot(){\n    try{\n      var btn=document.getElementById('ai-generate-image'); var old=btn?btn.style.display:null; if(btn) btn.style.display='none';\n      const canvas=await html2canvas(document.body,{useCORS:true,allowTaint:true,scale:2,logging:false,backgroundColor:null});\n      if(btn) btn.style.display=old||'';\n      const url=canvas.toDataURL('image/png');\n      const a=document.createElement('a');\n      a.href=url; a.download='preview.png';\n      document.body.appendChild(a); a.click(); a.remove();\n      try{ if(window.opener && typeof window.opener.postMessage==='function'){ window.opener.postMessage({ type:'ABSOL_PREVIEW_IMAGE', dataUrl:url }, '*'); } }catch(_){}\n    }catch(e){ console.error('Capture failed',e); alert('Capture failed'); }\n  }\n  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',injectBtn);} else { injectBtn(); }\n})();\n<\/script>`;
+    if (base.match(/<\/body>/i)) {
+        base = base.replace(/<\/body>/i, `${helperScript}\n</body>`);
+    } else {
+        base += `\n${helperScript}`;
+    }
+
+    return base;
+}
+
+// Open the integrated HTML in a new tab for instant preview
+function runIntegrated(index) {
+    try {
+        const md = conversationHistory[index]?.solution || '';
+        const html = buildIntegratedHTMLFromSolution(md);
+        const win = window.open('', '_blank');
+        if (!win) {
+            // Fallback to inline iframe preview
+            openIntegratedInline(html);
+            return;
+        }
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+    } catch (e) {
+        console.error('Run Integrated Error:', e);
+        // Fallback to inline iframe if any error occurs
+        try {
+            const md = conversationHistory[index]?.solution || '';
+            const html = buildIntegratedHTMLFromSolution(md);
+            openIntegratedInline(html);
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Preview Error', text: e.message || 'Failed to open preview.' });
+        }
+    }
+}
+
+// Create or reuse a fullscreen modal with an iframe to display integrated preview
+function ensurePreviewModal() {
+    let overlay = document.getElementById('ai-preview-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'ai-preview-overlay';
+        Object.assign(overlay.style, {
+            position: 'fixed', left: '0', top: '0', width: '100vw', height: '100vh',
+            background: 'rgba(0,0,0,0.7)', zIndex: '10000', display: 'none'
+        });
+        const panel = document.createElement('div');
+        Object.assign(panel.style, {
+            position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+            width: '96vw', height: '92vh', background: '#101218', borderRadius: '10px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid #2a2f3a'
+        });
+        const bar = document.createElement('div');
+        Object.assign(bar.style, {
+            height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0 12px', background: '#151923', color: '#e6e6e6', borderBottom: '1px solid #2a2f3a'
+        });
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = 'Preview';
+        bar.appendChild(titleSpan);
+        const actions = document.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.gap = '8px';
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save Image';
+        saveBtn.className = 'edit-button';
+        saveBtn.style.cursor = 'pointer';
+        saveBtn.onclick = () => captureIframeImage();
+        const sendBtn = document.createElement('button');
+        sendBtn.textContent = 'Send to App';
+        sendBtn.className = 'edit-button';
+        sendBtn.style.cursor = 'pointer';
+        sendBtn.onclick = () => captureIframeAndSend();
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Close';
+        closeBtn.className = 'edit-button';
+        Object.assign(closeBtn.style, { cursor: 'pointer' });
+        closeBtn.onclick = () => overlay.style.display = 'none';
+        actions.appendChild(saveBtn);
+        actions.appendChild(sendBtn);
+        actions.appendChild(closeBtn);
+        bar.appendChild(actions);
+        const iframe = document.createElement('iframe');
+        iframe.id = 'ai-preview-iframe';
+        Object.assign(iframe.style, { width: '100%', height: 'calc(100% - 44px)', border: '0', background: '#ffffff' });
+        panel.appendChild(bar);
+        panel.appendChild(iframe);
+        overlay.appendChild(panel);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.style.display = 'none';
+        });
+        document.body.appendChild(overlay);
+    }
+    return overlay;
+}
+
+function openIntegratedInline(html) {
+    const overlay = ensurePreviewModal();
+    const iframe = overlay.querySelector('#ai-preview-iframe');
+    overlay.style.display = 'block';
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+}
+
+async function captureIframeImage(){
+    try{
+        const overlay=document.getElementById('ai-preview-overlay');
+        const iframe=overlay.querySelector('#ai-preview-iframe');
+        const w=iframe.contentWindow;
+        const d=w.document;
+        // Ensure html2canvas exists inside iframe; if not, inject then capture
+        const ensure = () => new Promise((res)=>{
+            if(w.html2canvas){res();return;}
+            const s=d.createElement('script');
+            s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            s.onload=()=>res();
+            d.head.appendChild(s);
+        });
+        await ensure();
+        const btn=d.getElementById('ai-generate-image'); const old=btn?btn.style.display:null; if(btn) btn.style.display='none';
+        const canvas=await w.html2canvas(d.body,{useCORS:true,allowTaint:true,scale:2,logging:false,backgroundColor:null});
+        if(btn) btn.style.display=old||'';
+        const url=canvas.toDataURL('image/png');
+        const a=document.createElement('a');
+        a.href=url; a.download='preview.png';
+        document.body.appendChild(a); a.click(); a.remove();
+    }catch(e){
+        console.error('Iframe capture failed',e);
+        Swal.fire({icon:'error',title:'Capture Failed',text:e.message||'Could not capture preview image.'});
+    }
+}
+
 function renderHistory() {
     const outputElement = document.getElementById('solution-output');
     outputElement.innerHTML = '';
@@ -238,7 +485,8 @@ function renderHistory() {
         const deleteButton = `<button class="delete-button" onclick="deletePractical(${index})">Delete</button>`;
         const readAloudButtonHtml = `<button class="read-aloud-button">Read Aloud</button>`;
         const editSolutionButton = `<button class="edit-button" onclick="openEditSolutionModal(${index})">Edit Solution</button>`;
-        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}${readAloudButtonHtml}${editSolutionButton}</h2><p>${practical.question}</p><div class="solution-text-container markdown-body">${htmlSolution}</div>`;
+        const runButton = `<button class="edit-button" onclick="runIntegrated(${index})">Run</button>`;
+        practicalContainer.innerHTML = `<h2>Practical No: ${practical.practicalNo}${editButton}${deleteButton}${readAloudButtonHtml}${editSolutionButton}${runButton}</h2><p>${practical.question}</p><div class="solution-text-container markdown-body">${htmlSolution}</div>`;
         outputElement.appendChild(practicalContainer);
 
         // Attach event listener for the read aloud button
@@ -313,37 +561,99 @@ function saveEditedSolution(index, newSolution) {
 // Streaming helper using Server-Sent Events
 function streamSolution(questionText, onUpdate, onComplete, onError) {
     return new Promise((resolve, reject) => {
-        try {
-            const es = new EventSource(`/api/solve/stream?q=${encodeURIComponent(questionText)}`);
-            let buffer = '';
-            let throttleId = null;
-            const flush = () => {
-                throttleId = null;
-                try { onUpdate && onUpdate(buffer); } catch (_) {}
-            };
-            es.onmessage = (evt) => {
-                try {
-                    const payload = JSON.parse(evt.data || '{}');
-                    if (payload.text) {
-                        buffer += payload.text;
-                        if (!throttleId) throttleId = setTimeout(flush, 80);
+        let finished = false;
+        let buffer = '';
+        let throttleId = null;
+        const flush = () => {
+            throttleId = null;
+            try { onUpdate && onUpdate(buffer); } catch (_) {}
+        };
+
+        const useFetchFallback = async () => {
+            try {
+                const resp = await fetch(`/api/solve/stream?q=${encodeURIComponent(questionText)}`, {
+                    headers: { 'Accept': 'text/event-stream' }
+                });
+                if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let leftover = '';
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    leftover += decoder.decode(value, { stream: true });
+                    let idx;
+                    while ((idx = leftover.indexOf('\n\n')) !== -1) {
+                        const chunk = leftover.slice(0, idx);
+                        leftover = leftover.slice(idx + 2);
+                        const lines = chunk.split('\n');
+                        let eventName = 'message';
+                        let dataLine = '';
+                        for (const line of lines) {
+                            if (line.startsWith('event:')) eventName = line.slice(6).trim();
+                            if (line.startsWith('data:')) dataLine += line.slice(5).trim();
+                        }
+                        if (eventName === 'end') {
+                            if (throttleId) { clearTimeout(throttleId); flush(); }
+                            finished = true;
+                            try { onComplete && onComplete(buffer); } catch (_) {}
+                            resolve();
+                            return;
+                        }
+                        if (dataLine) {
+                            try {
+                                const payload = JSON.parse(dataLine);
+                                if (payload.text) {
+                                    buffer += payload.text;
+                                    if (!throttleId) throttleId = setTimeout(flush, 80);
+                                }
+                            } catch (_) {}
+                        }
                     }
-                } catch (e) {}
-            };
-            es.addEventListener('end', () => {
-                if (throttleId) { clearTimeout(throttleId); flush(); }
-                es.close();
-                try { onComplete && onComplete(buffer); } catch (_) {}
-                resolve();
-            });
-            es.addEventListener('error', (e) => {
-                es.close();
+                }
+                if (!finished) {
+                    if (throttleId) { clearTimeout(throttleId); flush(); }
+                    try { onComplete && onComplete(buffer); } catch (_) {}
+                    resolve();
+                }
+            } catch (e) {
                 try { onError && onError(e); } catch (_) {}
                 reject(e);
-            });
-        } catch (err) {
-            try { onError && onError(err); } catch (_) {}
-            reject(err);
+            }
+        };
+
+        if (window.EventSource) {
+            try {
+                const es = new EventSource(`/api/solve/stream?q=${encodeURIComponent(questionText)}`);
+                es.onmessage = (evt) => {
+                    try {
+                        const payload = JSON.parse(evt.data || '{}');
+                        if (payload.text) {
+                            buffer += payload.text;
+                            if (!throttleId) throttleId = setTimeout(flush, 80);
+                        }
+                    } catch (_) {}
+                };
+                es.addEventListener('end', () => {
+                    if (throttleId) { clearTimeout(throttleId); flush(); }
+                    es.close();
+                    finished = true;
+                    try { onComplete && onComplete(buffer); } catch (_) {}
+                    resolve();
+                });
+                es.addEventListener('error', async () => {
+                    es.close();
+                    if (finished) return;
+                    // fallback to fetch-stream
+                    await useFetchFallback();
+                });
+            } catch (_) {
+                // If EventSource construction throws, fallback
+                useFetchFallback();
+            }
+        } else {
+            // No EventSource support
+            useFetchFallback();
         }
     });
 }
@@ -359,7 +669,7 @@ async function rerunQuestion(index, newQuestion) {
         practicalContainer.appendChild(solutionContainer);
     }
     
-    practicalContainer.innerHTML = `<h2>Practical No: ${conversationHistory[index].practicalNo}<button class="edit-button" onclick="openEditModal(${index})">Edit</button><button class="delete-button" onclick="deletePractical(${index})">Delete</button><button class="edit-button" onclick="openEditSolutionModal(${index})">Edit Solution</button></h2><p>${newQuestion}</p>`;
+    practicalContainer.innerHTML = `<h2>Practical No: ${conversationHistory[index].practicalNo}<button class="edit-button" onclick="openEditModal(${index})">Edit</button><button class="delete-button" onclick="deletePractical(${index})">Delete</button><button class="edit-button" onclick="openEditSolutionModal(${index})">Edit Solution</button><button class="edit-button" onclick="runIntegrated(${index})">Run</button></h2><p>${newQuestion}</p>`;
     practicalContainer.appendChild(solutionContainer);
     solutionContainer.innerHTML = '<div class="loader"></div>';
 
@@ -414,7 +724,7 @@ document.getElementById('solve-button').addEventListener('click', async () => {
         practicalContainer.id = `practical-${practicalCount}`;
         const solutionContainer = document.createElement('div');
         solutionContainer.className = 'solution-text-container markdown-body';
-        practicalContainer.innerHTML = `<h2>Practical No: ${currentPracticalNo}<button class="edit-button" onclick="openEditModal(${practicalCount})">Edit</button><button class="delete-button" onclick="deletePractical(${currentPracticalNo - 1})">Delete</button><button class="edit-button" onclick="openEditSolutionModal(${practicalCount})">Edit Solution</button></h2><p>${questionText}</p>`;
+        practicalContainer.innerHTML = `<h2>Practical No: ${currentPracticalNo}<button class="edit-button" onclick="openEditModal(${practicalCount})">Edit</button><button class="delete-button" onclick="deletePractical(${currentPracticalNo - 1})">Delete</button><button class="edit-button" onclick="openEditSolutionModal(${practicalCount})">Edit Solution</button><button class=\"edit-button\" onclick=\"runIntegrated(${practicalCount})\">Run</button></h2><p>${questionText}</p>`;
         practicalContainer.appendChild(solutionContainer);
         outputElement.appendChild(practicalContainer);
         solutionContainer.innerHTML = '<div class="loader"></div>';
