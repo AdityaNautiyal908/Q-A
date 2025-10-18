@@ -310,6 +310,44 @@ function saveEditedSolution(index, newSolution) {
     renderHistory();
 }
 
+// Streaming helper using Server-Sent Events
+function streamSolution(questionText, onUpdate, onComplete, onError) {
+    return new Promise((resolve, reject) => {
+        try {
+            const es = new EventSource(`/api/solve/stream?q=${encodeURIComponent(questionText)}`);
+            let buffer = '';
+            let throttleId = null;
+            const flush = () => {
+                throttleId = null;
+                try { onUpdate && onUpdate(buffer); } catch (_) {}
+            };
+            es.onmessage = (evt) => {
+                try {
+                    const payload = JSON.parse(evt.data || '{}');
+                    if (payload.text) {
+                        buffer += payload.text;
+                        if (!throttleId) throttleId = setTimeout(flush, 80);
+                    }
+                } catch (e) {}
+            };
+            es.addEventListener('end', () => {
+                if (throttleId) { clearTimeout(throttleId); flush(); }
+                es.close();
+                try { onComplete && onComplete(buffer); } catch (_) {}
+                resolve();
+            });
+            es.addEventListener('error', (e) => {
+                es.close();
+                try { onError && onError(e); } catch (_) {}
+                reject(e);
+            });
+        } catch (err) {
+            try { onError && onError(err); } catch (_) {}
+            reject(err);
+        }
+    });
+}
+
 async function rerunQuestion(index, newQuestion) {
     conversationHistory[index].question = newQuestion;
 
@@ -326,28 +364,18 @@ async function rerunQuestion(index, newQuestion) {
     solutionContainer.innerHTML = '<div class="loader"></div>';
 
     try {
-        const response = await fetch('/api/solve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ questionText: newQuestion })
+        await streamSolution(newQuestion, (buffer) => {
+            solutionContainer.innerHTML = marked.parse(buffer);
+        }, (finalText) => {
+            conversationHistory[index].solution = finalText;
+            saveSession();
+            hljs.highlightAll();
+            addCopyButtons();
+            addRunCodeButtons();
+            renderMermaidDiagrams();
+        }, (err) => {
+            solutionContainer.innerHTML = `<p style="color: red;">Error: ${err?.message || 'Streaming failed'}</p>`;
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`API Error: ${response.status} - ${errorData.error}`);
-        }
-
-        const data = await response.json();
-        const solutionText = data.candidates[0].content.parts[0].text;
-
-        solutionContainer.innerHTML = marked.parse(solutionText);
-        conversationHistory[index].solution = solutionText;
-        saveSession();
-        hljs.highlightAll();
-        addCopyButtons();
-        addRunCodeButtons();
-        renderMermaidDiagrams();
-
     } catch (error) {
         solutionContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
     }
@@ -392,43 +420,34 @@ document.getElementById('solve-button').addEventListener('click', async () => {
         solutionContainer.innerHTML = '<div class="loader"></div>';
 
         try {
-            const response = await fetch('/api/solve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ questionText })
+            await streamSolution(questionText, (buffer) => {
+                solutionContainer.innerHTML = marked.parse(buffer);
+            }, (finalText) => {
+                solutionContainer.innerHTML = marked.parse(finalText);
+                const newPractical = {
+                    question: questionText,
+                    solution: finalText,
+                    practicalNo: currentPracticalNo
+                };
+                conversationHistory.push(newPractical);
+                saveSession();
+
+                hljs.highlightAll();
+                addCopyButtons();
+                addRunCodeButtons();
+                renderMermaidDiagrams();
+
+                practicalCount++;
+                wordButton.style.display = 'block';
+                document.getElementById('clear-button').style.display = 'block';
+                document.getElementById('export-button').style.display = 'block';
+
+                latestSolutionId = `practical-${practicalCount - 1}`;
+                scrollToSolutionButton.style.display = 'flex';
+            }, (err) => {
+                solutionContainer.innerHTML = `<p style="color: red;">Error: ${err?.message || 'Streaming failed'}</p>`;
+                console.error('Stream Error:', err);
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`API Error: ${response.status} - ${errorData.error}`);
-            }
-
-            const data = await response.json();
-            const solutionText = data.candidates[0].content.parts[0].text;
-
-            solutionContainer.innerHTML = marked.parse(solutionText);
-
-            const newPractical = {
-                question: questionText,
-                solution: solutionText,
-                practicalNo: currentPracticalNo
-            };
-            conversationHistory.push(newPractical);
-            saveSession();
-
-            hljs.highlightAll();
-            addCopyButtons();
-            addRunCodeButtons();
-            renderMermaidDiagrams();
-
-            practicalCount++;
-            wordButton.style.display = 'block';
-            document.getElementById('clear-button').style.display = 'block';
-            document.getElementById('export-button').style.display = 'block';
-
-            latestSolutionId = `practical-${practicalCount - 1}`;
-            scrollToSolutionButton.style.display = 'flex';
-
         } catch (error) {
             solutionContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
             console.error("Fetch Error:", error);

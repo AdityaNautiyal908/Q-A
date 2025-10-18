@@ -38,6 +38,67 @@ app.get('/script.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'script.js'));
 });
 
+app.get('/api/solve/stream', async (req, res) => {
+    const questionText = req.query.q || '';
+    const API_KEY = process.env.API_KEY;
+    const MODEL_NAME = 'gemini-2.5-flash';
+    const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    if (!API_KEY || !questionText) {
+        res.write(`event: error\n`);
+        res.write(`data: ${JSON.stringify({ error: 'Missing API key or question' })}\n\n`);
+        return res.end();
+    }
+
+    const prompt = `User Question: "${questionText}"`;
+    try {
+        const response = await axios.post(
+            API_ENDPOINT,
+            { contents: [{ parts: [{ text: prompt }] }] },
+            { headers: { 'x-goog-api-key': API_KEY } }
+        );
+
+        const fullText = (((response.data || {}).candidates || [])[0] || {}).content?.parts?.[0]?.text || '';
+        if (!fullText) {
+            res.write(`event: error\n`);
+            res.write(`data: ${JSON.stringify({ error: 'Empty response from AI' })}\n\n`);
+            res.write(`event: end\n`);
+            res.write(`data: done\n\n`);
+            return res.end();
+        }
+
+        const words = fullText.split(/(\s+)/);
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i >= words.length) {
+                clearInterval(interval);
+                res.write(`event: end\n`);
+                res.write(`data: done\n\n`);
+                return res.end();
+            }
+            const chunk = words.slice(i, i + 6).join('');
+            i += 6;
+            res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+        }, 30);
+
+        req.on('close', () => {
+            clearInterval(interval);
+        });
+    } catch (error) {
+        res.write(`event: error\n`);
+        const errMsg = error.response ? JSON.stringify(error.response.data) : error.message;
+        res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);
+        res.write(`event: end\n`);
+        res.write(`data: done\n\n`);
+        res.end();
+    }
+});
+
 app.post('/api/solve', async (req, res) => {
     const { questionText } = req.body;
     const API_KEY = process.env.API_KEY;
