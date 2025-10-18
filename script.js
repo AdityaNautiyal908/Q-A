@@ -370,7 +370,7 @@ document.getElementById('solve-button').addEventListener('click', async () => {
     }
 
     solveButton.disabled = true;
-    solveButton.innerHTML = '<div class="loader-small"></div> Generating...';
+    solveButton.innerHTML = '<div class="loading-content-wrapper"><span>Generating</span><span class="ellipsis-container"><span>.</span><span>.</span><span>.</span></span></div>';
 
     const questions = allQuestionsText.split('\n').filter(q => q.trim() !== '');
 
