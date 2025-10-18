@@ -1088,16 +1088,19 @@ function getDownloadContent() {
         // Remove all interactive buttons and input areas
         clone.querySelectorAll('.run-code-button, .capture-output-button, .copy-button, .read-aloud-button, .code-input-container, .delete-input-button').forEach(el => el.remove());
 
-        // Find the generated image in the original container
-        const imagePreview = practicalContainer.querySelector(`#image-preview-container-${index} img`);
-        
+        // Find the generated image (supports both legacy and new preview flows)
+        const legacyImagePreview = practicalContainer.querySelector(`#image-preview-container-${index} img`);
+        const generatedImage = practicalContainer.querySelector('.generated-preview-wrap img');
+        const storedPreview = practical.previewImage;
+        let imageSrc = (generatedImage && generatedImage.src) || (legacyImagePreview && legacyImagePreview.src) || storedPreview || '';
+
         let imageHtml = '';
-        if (imagePreview && imagePreview.src) {
+        if (imageSrc) {
             // If an image exists, use it and remove the text-based output container from the clone
-            imageHtml = `<br><img src="${imagePreview.src}" style="max-width: 100%; border: 1px solid #ccc; margin-top: 10px;">`;
+            imageHtml = `<br><b style="font-size: 16px;">OUTPUT</b><br><img src="${imageSrc}" style="max-width: 100%; border: 1px solid #ccc; margin-top: 10px;">`;
             clone.querySelectorAll('.code-output-container').forEach(el => el.remove());
         } else {
-            // If no image, add the "OUTPUT" heading to the existing text-based output
+            // If no image, add the "OUTPUT" heading to any existing text-based output
             const outputContainers = clone.querySelectorAll('.code-output-container');
             outputContainers.forEach(outputContainer => {
                 const outputHeading = document.createElement('p');
@@ -1164,11 +1167,56 @@ function getDownloadContent() {
     `;
 }
 
-function downloadAsWord() {
-    const content = getDownloadContent();
-    const blob = new Blob(['\ufeff', content], {
-        type: 'application/msword;charset=utf-8'
+// Build an MHTML document so Word embeds data URI images reliably
+function buildMhtmlFromHtml(html) {
+    const boundary = '----=_Absol_MHTML_' + Date.now();
+    const parts = [];
+    const images = [];
+
+    // Extract data URI images and replace in HTML with Content-Location references
+    const imgRegex = /<img\s+[^>]*src=["'](data:(image\/[a-zA-Z0-9.+-]+);base64,([^"'>]+))["'][^>]*>/gi;
+    let idx = 1;
+    html = html.replace(imgRegex, (match, full, mime, b64) => {
+        const ext = mime.split('/')[1].split('+')[0] || 'png';
+        const filename = `image_${idx}.${ext}`;
+        images.push({ filename, mime, b64 });
+        idx++;
+        return match.replace(full, `file:///${filename}`);
     });
+
+    // Main HTML part
+    parts.push(
+        `--${boundary}\r\n` +
+        `Content-Type: text/html; charset="utf-8"\r\n` +
+        `Content-Transfer-Encoding: 8bit\r\n` +
+        `Content-Location: file:///index.html\r\n\r\n` +
+        `${html}\r\n`
+    );
+
+    // Image parts
+    images.forEach(({ filename, mime, b64 }) => {
+        parts.push(
+            `--${boundary}\r\n` +
+            `Content-Type: ${mime}\r\n` +
+            `Content-Transfer-Encoding: base64\r\n` +
+            `Content-Location: file:///${filename}\r\n\r\n` +
+            `${b64}\r\n`
+        );
+    });
+
+    // Closing boundary
+    parts.push(`--${boundary}--`);
+
+    const mhtmlHeader = `MIME-Version: 1.0\r\n` +
+        `Content-Type: multipart/related; type="text/html"; boundary="${boundary}"\r\n\r\n`;
+
+    return mhtmlHeader + parts.join('');
+}
+
+function downloadAsWord() {
+    const html = getDownloadContent();
+    const mhtml = buildMhtmlFromHtml(html);
+    const blob = new Blob([mhtml], { type: 'application/msword' });
     saveAs(blob, 'Full_Assignment_Solution.doc');
 }
 
