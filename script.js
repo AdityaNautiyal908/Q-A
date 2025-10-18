@@ -97,26 +97,75 @@ function insertImageIntoLatestSolution(dataUrl){
 
     mermaid.initialize({ startOnLoad: false });
     loadSession();
+    initTheme();
 });
 
 const themeToggle = document.getElementById('theme-toggle');
 
+function applyTheme(mode) {
+    if (mode === 'light') {
+        document.body.classList.add('light-mode');
+    } else {
+        document.body.classList.remove('light-mode');
+    }
+}
+
+function getAutoThemeByTime() {
+    const now = new Date();
+    const hour = now.getHours();
+    // Light from 06:00 to 17:59, Dark otherwise
+    return (hour >= 6 && hour < 18) ? 'light' : 'dark';
+}
+
+let autoThemeTimeoutId = null;
+function scheduleNextAutoSwitch() {
+    if (autoThemeTimeoutId) clearTimeout(autoThemeTimeoutId);
+    const now = new Date();
+    const hour = now.getHours();
+    const next = new Date(now);
+    if (hour < 6) {
+        next.setHours(6, 0, 0, 0);
+    } else if (hour < 18) {
+        next.setHours(18, 0, 0, 0);
+    } else {
+        next.setDate(next.getDate() + 1);
+        next.setHours(6, 0, 0, 0);
+    }
+    const delay = Math.max(1000, next.getTime() - now.getTime());
+    autoThemeTimeoutId = setTimeout(() => {
+        if (!localStorage.getItem('themePref')) {
+            applyTheme(getAutoThemeByTime());
+            scheduleNextAutoSwitch();
+        }
+    }, delay);
+}
+
+function initTheme() {
+    const pref = localStorage.getItem('themePref');
+    if (pref === 'light' || pref === 'dark') {
+        applyTheme(pref);
+    } else {
+        // Auto mode
+        applyTheme(getAutoThemeByTime());
+        scheduleNextAutoSwitch();
+    }
+}
+
 themeToggle.addEventListener('click', (e) => {
     const isLight = document.body.classList.contains('light-mode');
-    
     const x = e.clientX;
     const y = e.clientY;
-
     document.documentElement.style.setProperty('--x', x + 'px');
     document.documentElement.style.setProperty('--y', y + 'px');
-
+    const nextMode = isLight ? 'dark' : 'light';
+    const run = () => applyTheme(nextMode);
     if (document.startViewTransition) {
-        document.startViewTransition(() => {
-            document.body.classList.toggle('light-mode');
-        });
+        document.startViewTransition(run);
     } else {
-        document.body.classList.toggle('light-mode');
+        run();
     }
+    // User manual override disables auto; store preference
+    localStorage.setItem('themePref', nextMode);
 });
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
