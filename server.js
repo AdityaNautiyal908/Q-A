@@ -33,7 +33,7 @@ app.post('/api/solve', async (req, res) => {
     const { questionText } = req.body;
     const API_KEY = process.env.API_KEY;
     const MODEL_NAME = 'gemini-2.5-flash';
-    const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
+    const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
 
     if (!API_KEY) {
         return res.status(500).json({ error: 'API key not found.' });
@@ -42,9 +42,11 @@ app.post('/api/solve', async (req, res) => {
     const prompt = `User Question: "${questionText}"`;
 
     try {
-        const response = await axios.post(API_ENDPOINT, {
-            contents: [{ parts: [{ text: prompt }] }]
-        });
+        const response = await axios.post(
+            API_ENDPOINT,
+            { contents: [{ parts: [{ text: prompt }] }] },
+            { headers: { 'x-goog-api-key': API_KEY } }
+        );
         res.json(response.data);
     } catch (error) {
         console.error('Error calling Gemini API:', error.response ? error.response.data : error.message);
