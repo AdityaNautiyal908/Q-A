@@ -41,7 +41,7 @@ app.get('/script.js', (req, res) => {
 app.post('/api/solve', async (req, res) => {
     const { questionText } = req.body;
     const API_KEY = process.env.API_KEY;
-    const MODEL_NAME = 'gemini-1.5-flash';
+    const MODEL_NAME = 'gemini-1.5-pro-latest';
     const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
 
     if (!API_KEY) {
