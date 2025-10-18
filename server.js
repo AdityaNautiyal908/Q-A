@@ -2,6 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const cors = require('cors');
+const { Pool } = require('pg');
 const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
 require('dotenv').config();
@@ -9,7 +10,15 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-const RAPIDAPI_KEY = process.env.ONECOMPILER_API_KEY; 
+// Create a new pool instance to connect to your database
+const pool = new Pool({
+    connectionString: process.env.POSTGRES_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
+
+const RAPIDAPI_KEY = process.env.ONECOMPILER_API_KEY;
 const RAPIDAPI_HOST = 'onecompiler-apis.p.rapidapi.com';
 const API_ENDPOINT_ONECOMPILER = 'https://onecompiler-apis.p.rapidapi.com/api/v1/run';
 
@@ -32,7 +41,7 @@ app.get('/script.js', (req, res) => {
 app.post('/api/solve', async (req, res) => {
     const { questionText } = req.body;
     const API_KEY = process.env.API_KEY;
-    const MODEL_NAME = 'gemini-2.5-flash';
+    const MODEL_NAME = 'gemini-1.5-flash';
     const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
 
     if (!API_KEY) {
@@ -53,6 +62,35 @@ app.post('/api/solve', async (req, res) => {
         res.status(500).json({ error: 'Failed to get response from AI.' });
     }
 });
+
+// ----------------------------------------------------------------------
+// REVIEWS API
+// ----------------------------------------------------------------------
+app.get('/api/reviews', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM reviews ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching reviews:', error);
+        res.status(500).json({ error: 'Failed to fetch reviews.' });
+    }
+});
+
+app.post('/api/reviews', async (req, res) => {
+    const { name, content } = req.body;
+    if (!name || !content) {
+        return res.status(400).json({ error: 'Name and review content cannot be empty.' });
+    }
+    try {
+        // Use 'review' as the column name to match the database schema
+        const { rows } = await pool.query('INSERT INTO reviews (name, review) VALUES ($1, $2) RETURNING *', [name, content]);
+        res.status(201).json(rows[0]);
+    } catch (error) {
+        console.error('Error submitting review:', error);
+        res.status(500).json({ error: 'Failed to submit review.' });
+    }
+});
+
 
 // ----------------------------------------------------------------------
 // 1. RUN CODE ENDPOINT (Handles Python, Java, C++, etc.)
@@ -135,7 +173,8 @@ app.post('/api/capture-screenshot', async (req, res) => {
         console.error('--- FATAL PUPPETEER ERROR ---');
         console.error('Error Details:', error.message);
         res.status(500).json({ error: 'Screenshot Failed on Server. Check Node.js console for detail.' });
-    } finally {
+    }
+    finally {
         if (browser) {
             await browser.close();
         }

@@ -1040,3 +1040,100 @@ function startTour() {
 
     tour.start();
 }
+
+// --- REVIEWS --- //
+async function loadReviews() {
+    try {
+        const response = await fetch('/api/reviews');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const reviews = await response.json();
+        const reviewsList = document.getElementById('reviews-list');
+        reviewsList.innerHTML = ''; // Clear existing reviews
+        reviews.forEach(review => {
+            const reviewElement = document.createElement('div');
+            reviewElement.className = 'review';
+            const reviewDate = new Date(review.created_at).toLocaleString();
+            // Use review.review to match the database column
+            reviewElement.innerHTML = `<p class="review-content">${review.review}</p><small><strong class="review-name">${review.name}</strong> - ${reviewDate}</small>`;
+            reviewsList.appendChild(reviewElement);
+        });
+    } catch (error) {
+        console.error("Could not load reviews:", error);
+        document.getElementById('reviews-list').innerHTML = '<p style="color: red;">Could not load reviews.</p>';
+    }
+}
+
+document.getElementById('review-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const nameInput = document.getElementById('review-name-input');
+    const reviewInput = document.getElementById('review-input');
+    const name = nameInput.value;
+    const content = reviewInput.value;
+    const submitButton = document.getElementById('submit-review-button');
+    const currentTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+
+    const swalTheme = {
+        background: currentTheme === 'dark' ? '#1e1e1e' : '#ffffff',
+        color: currentTheme === 'dark' ? '#e0e0e0' : '#333333'
+    };
+
+    if (!name.trim() || !content.trim()) {
+        Swal.fire({
+            title: 'Oops...',
+            text: 'Name and review cannot be empty!',
+            icon: 'error',
+            ...swalTheme
+        });
+        return;
+    }
+
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<div class="loader-small"></div> Submitting...';
+
+    try {
+        const response = await fetch('/api/reviews', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, content })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const newReview = await response.json();
+
+        const reviewsList = document.getElementById('reviews-list');
+        const reviewElement = document.createElement('div');
+        reviewElement.className = 'review';
+        const reviewDate = new Date(newReview.created_at).toLocaleString();
+        reviewElement.innerHTML = `<p class="review-content">${newReview.review}</p><small><strong class="review-name">${newReview.name}</strong> - ${reviewDate}</small>`;
+        reviewsList.prepend(reviewElement);
+
+        nameInput.value = '';
+        reviewInput.value = '';
+        Swal.fire({
+            title: 'Success!',
+            text: 'Thank you for your review!',
+            icon: 'success',
+            ...swalTheme
+        });
+
+    } catch (error) {
+        console.error("Failed to submit review:", error);
+        Swal.fire({
+            title: 'Error',
+            text: 'Failed to submit review. Please try again later.',
+            icon: 'error',
+            ...swalTheme
+        });
+    } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Submit Review';
+    }
+});
+
+// Load reviews when the page is ready
+document.addEventListener('DOMContentLoaded', loadReviews);
